@@ -5,9 +5,9 @@
 
 mod asset_tracking;
 mod audio;
-mod demo;
 #[cfg(feature = "dev")]
 mod dev_tools;
+mod joshua_game;
 mod menus;
 mod screens;
 mod theme;
@@ -35,6 +35,7 @@ impl Plugin for AppPlugin {
                 .set(WindowPlugin {
                     primary_window: Window {
                         title: "Joshuas Bad Week Bevy".to_string(),
+                        resolution: (800.0, 600.0).into(), // Match game config size
                         fit_canvas_to_parent: true,
                         ..default()
                     }
@@ -47,9 +48,9 @@ impl Plugin for AppPlugin {
         app.add_plugins((
             asset_tracking::plugin,
             audio::plugin,
-            demo::plugin,
             #[cfg(feature = "dev")]
             dev_tools::plugin,
+            joshua_game::plugin,
             menus::plugin,
             screens::plugin,
             theme::plugin,
@@ -70,8 +71,7 @@ impl Plugin for AppPlugin {
         app.init_state::<Pause>();
         app.configure_sets(Update, PausableSystems.run_if(in_state(Pause(false))));
 
-        // Spawn the main camera.
-        app.add_systems(Startup, spawn_camera);
+        // Camera will be spawned by joshua_game rendering system instead
     }
 }
 
@@ -96,7 +96,3 @@ struct Pause(pub bool);
 /// A system set for systems that shouldn't run while the game is paused.
 #[derive(SystemSet, Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PausableSystems;
-
-fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera2d));
-}
