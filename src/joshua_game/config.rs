@@ -38,7 +38,9 @@ pub struct GameConfig {
     pub kezia_color: Color,
     pub kezia_tracking_duration: f32,
     pub kezia_turn_rate: f32,
-    pub kezia_spawn_distance: f32,
+
+    // Enemy Spawning Settings
+    pub spawn_distance: f32,
 
     // Kezia Spawning Settings
     pub initial_spawn_interval: f32,
@@ -94,7 +96,9 @@ impl Default for GameConfig {
             kezia_color: Color::srgb(1.0, 0.0, 0.0), // Red
             kezia_tracking_duration: 5.0,
             kezia_turn_rate: 2.0,
-            kezia_spawn_distance: 50.0,
+
+            // Enemy Spawning Settings
+            spawn_distance: 15.0,
 
             // Kezia Spawning Settings
             initial_spawn_interval: 2.0,
@@ -106,7 +110,7 @@ impl Default for GameConfig {
             joel_height: 15.0,
             joel_speed: 100.0,
             joel_color: Color::srgb(0.0, 1.0, 1.0), // Cyan
-            joel_approach_distance: 50.0,
+            joel_approach_distance: 30.0,
             joel_tracking_duration: 8.0,
             joel_turn_rate: 5.0,
             joel_card_fire_rate: 1.5,

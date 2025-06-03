@@ -14,7 +14,6 @@ pub(super) fn plugin(app: &mut App) {
         .register_type::<Velocity>()
         .register_type::<MaxSpeed>()
         .register_type::<TurnRate>()
-        .register_type::<TargetPlayer>()
         .register_type::<RotateTowardsTarget>()
         .register_type::<MoveTowardsPoint>()
         .register_type::<ProjectileLauncher>()
@@ -106,17 +105,6 @@ pub struct MaxSpeed(pub f32);
 pub struct TurnRate(pub f32);
 
 // ==================== New ECS Behavior Components ====================
-
-#[derive(Component, Reflect)]
-pub struct TargetPlayer {
-    pub target_entity: Entity,
-}
-
-impl TargetPlayer {
-    pub fn new(target_entity: Entity) -> Self {
-        Self { target_entity }
-    }
-}
 
 #[derive(Component, Reflect)]
 pub struct RotateTowardsTarget {

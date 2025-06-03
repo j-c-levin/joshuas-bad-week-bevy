@@ -9,7 +9,7 @@ use crate::{
         components::{
             Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, KeziaState, LifetimeTimer,
             MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState, OffScreenCleanup, Player,
-            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, TargetPlayer, Timer,
+            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
             TurnRate, Velocity,
         },
         config::GameConfig,
@@ -109,19 +109,14 @@ fn handle_enemy_spawn_events(
     mut commands: Commands,
     mut events: EventReader<EnemySpawnEvent>,
     config: Res<GameConfig>,
-    player_query: Query<Entity, With<PlayerTarget>>,
 ) {
-    let Ok(player_entity) = player_query.single() else {
-        return; // No player entity available
-    };
-
     for event in events.read() {
         match event.enemy_type {
             EnemyType::Kezia => {
-                spawn_kezia_ecs(&mut commands, event.position, event.spawn_side, &config, player_entity);
+                spawn_kezia_ecs(&mut commands, event.position, event.spawn_side, &config);
             }
             EnemyType::Joel => {
-                spawn_joel_ecs(&mut commands, event.position, event.spawn_side, &config, player_entity);
+                spawn_joel_ecs(&mut commands, event.position, event.spawn_side, &config);
             }
         }
     }
@@ -159,7 +154,7 @@ fn update_card_lifetime(
 fn generate_spawn_position(config: &GameConfig) -> (Vec2, SpawnSide) {
     let mut rng = thread_rng();
     let side = rng.gen_range(0..4);
-    let spawn_distance = config.kezia_spawn_distance;
+    let spawn_distance = config.spawn_distance;
 
     let screen_half_width = config.screen_width / 2.0;
     let screen_half_height = config.screen_height / 2.0;
@@ -192,17 +187,15 @@ fn generate_spawn_position(config: &GameConfig) -> (Vec2, SpawnSide) {
     }
 }
 
-/// Calculate Joel's target position (approach distance from screen edge)
-fn calculate_joel_target_position(spawn_side: SpawnSide, config: &GameConfig) -> Vec2 {
-    let approach_distance = config.joel_approach_distance;
-    let screen_half_width = config.screen_width / 2.0;
-    let screen_half_height = config.screen_height / 2.0;
+/// Calculate Joel's target position (approach distance from spawn position towards screen)
+fn calculate_joel_target_position(spawn_position: Vec2, spawn_side: SpawnSide, config: &GameConfig) -> Vec2 {
+    let approach_distance = config.spawn_distance + config.joel_approach_distance;
 
     match spawn_side {
-        SpawnSide::Top => Vec2::new(0.0, screen_half_height - approach_distance),
-        SpawnSide::Right => Vec2::new(screen_half_width - approach_distance, 0.0),
-        SpawnSide::Bottom => Vec2::new(0.0, -screen_half_height + approach_distance),
-        SpawnSide::Left => Vec2::new(-screen_half_width + approach_distance, 0.0),
+        SpawnSide::Top => spawn_position + Vec2::new(0.0, -approach_distance), // Move down from spawn
+        SpawnSide::Right => spawn_position + Vec2::new(-approach_distance, 0.0), // Move left from spawn
+        SpawnSide::Bottom => spawn_position + Vec2::new(0.0, approach_distance), // Move up from spawn
+        SpawnSide::Left => spawn_position + Vec2::new(approach_distance, 0.0), // Move right from spawn
     }
 }
 
@@ -212,7 +205,6 @@ fn spawn_kezia_ecs(
     position: Vec2,
     spawn_side: SpawnSide,
     config: &GameConfig,
-    player_entity: Entity,
 ) {
     // Calculate initial rotation and velocity based on spawn side to enter screen properly
     let (initial_rotation, initial_velocity) = match spawn_side {
@@ -253,7 +245,6 @@ fn spawn_kezia_ecs(
         Velocity(initial_velocity),
         MaxSpeed(config.kezia_speed),
         TurnRate(config.kezia_turn_rate),
-        TargetPlayer::new(player_entity),
         RotateTowardsTarget::new(0.0),
         KeziaState::default(),
         Timer::new(config.kezia_tracking_duration, false),
@@ -280,9 +271,8 @@ fn spawn_joel_ecs(
     position: Vec2,
     spawn_side: SpawnSide,
     config: &GameConfig,
-    player_entity: Entity,
 ) {
-    let target_position = calculate_joel_target_position(spawn_side, config);
+    let target_position = calculate_joel_target_position(position, spawn_side, config);
 
     // Calculate initial rotation and velocity to move perpendicular to spawn side
     let (initial_rotation, initial_velocity) = match spawn_side {
@@ -325,8 +315,6 @@ fn spawn_joel_ecs(
         TurnRate(config.joel_turn_rate),
         NewJoelState::Entering, // Start with new entering state
         MoveTowardsPoint::new(target_position, 5.0),
-        TargetPlayer::new(player_entity),
-        RotateTowardsTarget::new(std::f32::consts::PI / 2.0), // Joel faces perpendicular to player
     )).id();
 
     // Add remaining components
