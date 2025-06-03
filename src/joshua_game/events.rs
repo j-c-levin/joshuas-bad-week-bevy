@@ -18,15 +18,6 @@ pub(super) fn plugin(app: &mut App) {
 pub struct DamageEvent {
     pub target: Entity,
     pub amount: i32,
-    pub position: Vec2,
-    pub source: DamageSource,
-}
-
-#[derive(Clone, Copy)]
-pub enum DamageSource {
-    Kezia,
-    Joel,
-    Card,
 }
 
 /// Event fired when an enemy should be spawned
@@ -48,7 +39,6 @@ pub enum EnemyType {
 pub struct CardSpawnEvent {
     pub position: Vec2,
     pub direction: Vec2,
-    pub source: Entity,
 }
 
 /// Event fired when the player dies
@@ -62,7 +52,4 @@ pub struct GameWinEvent;
 /// Event fired when an enemy dies/is destroyed
 #[derive(Event)]
 pub struct EnemyDeathEvent {
-    pub entity: Entity,
-    pub position: Vec2,
-    pub enemy_type: EnemyType,
 }

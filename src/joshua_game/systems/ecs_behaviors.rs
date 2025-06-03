@@ -265,7 +265,6 @@ fn projectile_launcher_system(
                     spawn_events.write(CardSpawnEvent {
                         position: transform.translation.xy(),
                         direction,
-                        source: Entity::PLACEHOLDER, // TODO: Pass actual entity
                     });
 
                     launcher.timer = 0.0;

@@ -101,7 +101,7 @@ fn setup_ui(mut commands: Commands, ui_query: Query<&GameUI>, config: Res<GameCo
                     font_size: 48.0,
                     ..default()
                 },
-                TextColor(config.game_over_color),
+                TextColor(Color::srgb(1.0, 0.0, 0.0)),
                 Node {
                     position_type: PositionType::Absolute,
                     left: Val::Percent(50.0),

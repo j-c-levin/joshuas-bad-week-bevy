@@ -63,7 +63,6 @@ pub enum GameStateEnum {
     Playing,
     Won,
     GameOver,
-    Paused,
 }
 
 /// Tracks enemy spawning difficulty over time

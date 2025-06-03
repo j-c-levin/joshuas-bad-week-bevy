@@ -82,14 +82,6 @@ pub struct Movement {
 }
 
 impl Movement {
-    pub fn new(speed: f32, turn_rate: f32) -> Self {
-        Self {
-            velocity: Vec2::ZERO,
-            speed,
-            rotation: 0.0,
-            turn_rate,
-        }
-    }
 }
 
 #[derive(Component, Reflect)]

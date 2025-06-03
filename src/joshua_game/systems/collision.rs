@@ -7,7 +7,7 @@ use crate::{
     joshua_game::{
         components::{Card, CollisionBox, Health, Joel, Kezia, Player},
         config::GameConfig,
-        events::{DamageEvent, DamageSource, GameOverEvent},
+        events::{DamageEvent, GameOverEvent},
         resources::GameState,
     },
 };
@@ -59,8 +59,6 @@ fn player_enemy_collision(
             damage_events.write(DamageEvent {
                 target: player_entity,
                 amount: config.kezia_damage,
-                position: player_pos,
-                source: DamageSource::Kezia,
             });
 
             // Destroy the Kezia that hit the player
@@ -77,8 +75,6 @@ fn player_enemy_collision(
             damage_events.write(DamageEvent {
                 target: player_entity,
                 amount: config.joel_damage,
-                position: player_pos,
-                source: DamageSource::Joel,
             });
 
             // Joel doesn't get destroyed on collision
@@ -113,8 +109,6 @@ fn player_card_collision(
             damage_events.write(DamageEvent {
                 target: player_entity,
                 amount: card.damage,
-                position: player_pos,
-                source: DamageSource::Card,
             });
 
             // Destroy the card that hit the player

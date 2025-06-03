@@ -5,7 +5,6 @@
 
 mod asset_tracking;
 mod audio;
-mod demo;
 #[cfg(feature = "dev")]
 mod dev_tools;
 mod joshua_game;
@@ -49,7 +48,6 @@ impl Plugin for AppPlugin {
         app.add_plugins((
             asset_tracking::plugin,
             audio::plugin,
-            // demo::plugin, // Removed to prevent duck from appearing
             #[cfg(feature = "dev")]
             dev_tools::plugin,
             joshua_game::plugin,

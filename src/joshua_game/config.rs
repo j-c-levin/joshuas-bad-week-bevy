@@ -24,22 +24,10 @@ pub struct GameConfig {
 
     // UI Settings
     pub ui_text_color: Color,
-    pub health_text_position: Vec2,
-    pub win_text_position: Vec2,
 
     // Effect Colors
-    pub damage_effect_color: Color,
     pub player_low_health_color: Color,
     pub joel_charging_color: Color,
-    pub win_message_color: Color,
-    pub game_over_color: Color,
-    pub timer_warning_color: Color,
-    pub timer_caution_color: Color,
-    pub health_low_color: Color,
-    pub health_medium_color: Color,
-    pub health_bar_background_color: Color,
-    pub health_bar_full_color: Color,
-    pub background_color: Color,
 
     // Input Settings
     pub diagonal_movement_normalizer: f32,
@@ -69,7 +57,6 @@ pub struct GameConfig {
     pub joel_turn_rate: f32,
     pub joel_card_fire_rate: f32,
     pub joel_damage: i32,
-    pub joel_spawn_distance: f32,
 
     // Card Projectile Settings
     pub card_width: f32,
@@ -97,22 +84,10 @@ impl Default for GameConfig {
 
             // UI Settings
             ui_text_color: Color::WHITE,
-            health_text_position: Vec2::new(10.0, 10.0),
-            win_text_position: Vec2::new(400.0, 300.0), // Screen center
 
             // Effect Colors
-            damage_effect_color: Color::srgb(1.0, 0.0, 0.0), // Red
             player_low_health_color: Color::srgb(1.0, 0.0, 0.0), // Red
             joel_charging_color: Color::WHITE,
-            win_message_color: Color::srgb(1.0, 0.8, 0.0), // Gold
-            game_over_color: Color::srgb(1.0, 0.0, 0.0),   // Red
-            timer_warning_color: Color::srgb(1.0, 0.0, 0.0), // Red
-            timer_caution_color: Color::srgb(1.0, 0.5, 0.0), // Orange
-            health_low_color: Color::srgb(1.0, 0.0, 0.0),  // Red
-            health_medium_color: Color::srgb(1.0, 0.5, 0.0), // Orange
-            health_bar_background_color: Color::srgb(0.5, 0.5, 0.5), // Gray
-            health_bar_full_color: Color::srgb(0.0, 1.0, 0.0), // Green
-            background_color: Color::BLACK,
 
             // Input Settings
             diagonal_movement_normalizer: 0.707, // 1/sqrt(2)
@@ -142,7 +117,6 @@ impl Default for GameConfig {
             joel_turn_rate: 5.0,
             joel_card_fire_rate: 1.5,
             joel_damage: 1,
-            joel_spawn_distance: 50.0,
 
             // Card Projectile Settings
             card_width: 6.0,

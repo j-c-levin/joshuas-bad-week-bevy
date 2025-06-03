@@ -8,7 +8,7 @@ use crate::{
     joshua_game::{
         components::{
             Card, CollisionBox, GameEntity, Health, Joel, Kezia, KeziaState, LifetimeTimer,
-            MaxSpeed, MoveInDirection, MoveTowardsPoint, Movement, NewJoelState, OffScreenCleanup,
+            MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState, OffScreenCleanup,
             Player, PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
             TrackTarget, TurnRate, Velocity,
         },
@@ -148,60 +148,6 @@ fn update_card_lifetime(
             commands.entity(entity).despawn();
         }
     }
-}
-
-/// Spawn a Kezia enemy
-fn spawn_kezia(commands: &mut Commands, position: Vec2, config: &GameConfig) {
-    commands.spawn((
-        Name::new("Kezia"),
-        Transform::from_translation(position.extend(0.0)),
-        Kezia::default(),
-        Movement::new(config.kezia_speed, config.kezia_turn_rate),
-        CollisionBox::new(Vec2::new(config.kezia_width, config.kezia_height)),
-        OffScreenCleanup,
-        GameEntity,
-    ));
-
-    info!("Kezia spawned at {:?}", position);
-}
-
-/// Spawn a Joel enemy
-fn spawn_joel(commands: &mut Commands, position: Vec2, spawn_side: SpawnSide, config: &GameConfig) {
-    let target_position = calculate_joel_target_position(spawn_side, config);
-
-    commands.spawn((
-        Name::new("Joel"),
-        Transform::from_translation(position.extend(0.0)),
-        Joel::new(spawn_side, position, target_position),
-        Movement::new(config.joel_speed, config.joel_turn_rate),
-        CollisionBox::new(Vec2::new(config.joel_width, config.joel_height)),
-        OffScreenCleanup,
-        GameEntity,
-    ));
-
-    info!("Joel spawned at {:?}", position);
-}
-
-/// Spawn a card projectile
-fn spawn_card(commands: &mut Commands, position: Vec2, direction: Vec2, config: &GameConfig) {
-    let mut movement = Movement::new(config.card_speed, 0.0);
-    movement.velocity = direction * config.card_speed;
-    movement.rotation = direction.y.atan2(direction.x);
-
-    commands.spawn((
-        Name::new("Card"),
-        Transform::from_translation(position.extend(0.0)),
-        Card::new(config.card_damage, 5.0), // 5 second lifetime
-        movement,
-        CollisionBox::new(Vec2::new(config.card_width, config.card_height)),
-        OffScreenCleanup,
-        GameEntity,
-    ));
-
-    info!(
-        "Card spawned at {:?} in direction {:?}",
-        position, direction
-    );
 }
 
 /// Generate a random spawn position just off-screen

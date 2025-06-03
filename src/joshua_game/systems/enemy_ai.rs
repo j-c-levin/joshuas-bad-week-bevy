@@ -161,7 +161,6 @@ fn joel_ai_system(
                     card_events.write(CardSpawnEvent {
                         position: joel_pos,
                         direction: direction_to_player,
-                        source: Entity::PLACEHOLDER, // TODO: Pass actual entity
                     });
 
                     joel.card_fire_timer = 0.0;
