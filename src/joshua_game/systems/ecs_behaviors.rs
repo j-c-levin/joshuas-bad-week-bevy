@@ -12,36 +12,77 @@ use crate::{
         },
         config::GameConfig,
         events::CardSpawnEvent,
-        resources::GameState,
     },
 };
 
+/// System sets for organizing ECS behavior execution phases
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+enum BehaviorPhase {
+    /// Set up targets and tick timers
+    Setup,
+    /// Calculate and set velocities
+    UpdateVelocity,
+    /// Apply physics (velocity to position)
+    ApplyPhysics,
+    /// Other effects that don't affect movement
+    Effects,
+}
+
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
+    // Configure the execution order of our behavior phases
+    app.configure_sets(
         Update,
         (
-            // Core movement systems
-            velocity_system,
-            apply_max_speed_system,
-            move_in_direction_system,
-            // Timer system
-            timer_tick_system,
-            // Behavior systems
-            track_target_system,
-            track_velocity_system,
-            rotate_towards_target_system,
-            move_towards_point_system,
-            projectile_launcher_system,
-            lifetime_timer_system,
-            // State machines
-            kezia_state_system,
-            joel_state_system,
-            // Target finding system
-            find_player_targets_system,
+            BehaviorPhase::Setup,
+            BehaviorPhase::UpdateVelocity,
+            BehaviorPhase::ApplyPhysics,
+            BehaviorPhase::Effects,
         )
+            .chain()
             .in_set(AppSystems::Update)
             .in_set(PausableSystems)
             .run_if(in_state(crate::screens::Screen::Gameplay)),
+    );
+
+    // Add systems to their respective phases
+    app.add_systems(
+        Update,
+        (
+            // Phase 1: Set up targets and tick timers
+            find_player_targets_system,
+            track_target_system,
+            timer_tick_system,
+        ).in_set(BehaviorPhase::Setup),
+    );
+
+    app.add_systems(
+        Update,
+        (
+            // Phase 2: Systems that calculate and set velocity (order matters within this phase)
+            rotate_towards_target_system,
+            move_in_direction_system,
+            track_velocity_system,
+            move_towards_point_system,
+            kezia_state_system,
+            joel_state_system,
+        )
+            .chain()
+            .in_set(BehaviorPhase::UpdateVelocity),
+    );
+
+    app.add_systems(
+        Update,
+        // Phase 3: Apply physics
+        velocity_system.in_set(BehaviorPhase::ApplyPhysics),
+    );
+
+    app.add_systems(
+        Update,
+        (
+            // Phase 4: Other effects that don't affect movement
+            projectile_launcher_system,
+            lifetime_timer_system,
+        ).in_set(BehaviorPhase::Effects),
     );
 }
 
@@ -51,23 +92,9 @@ pub(super) fn plugin(app: &mut App) {
 fn velocity_system(
     time: Res<Time>,
     mut query: Query<(&mut Transform, &Velocity)>,
-    game_state: Res<GameState>,
 ) {
-    if !game_state.is_game_active() {
-        return;
-    }
-
     for (mut transform, velocity) in &mut query {
         transform.translation += velocity.0.extend(0.0) * time.delta_secs();
-    }
-}
-
-/// Ensure velocity doesn't exceed max speed
-fn apply_max_speed_system(mut query: Query<(&mut Velocity, &MaxSpeed)>) {
-    for (mut velocity, max_speed) in &mut query {
-        if velocity.0.length() > max_speed.0 {
-            velocity.0 = velocity.0.normalize() * max_speed.0;
-        }
     }
 }
 
