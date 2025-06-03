@@ -1,0 +1,121 @@
+//! Player input handling system
+
+use bevy::prelude::*;
+
+use crate::{
+    joshua_game::{
+        components::{Player, Movement, PlayerTarget, Velocity, MaxSpeed},
+        config::GameConfig,
+        resources::GameState,
+    },
+    AppSystems, PausableSystems,
+};
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            player_input_system,
+            player_input_ecs_system,
+        )
+            .in_set(AppSystems::RecordInput)
+            .in_set(PausableSystems)
+            .run_if(in_state(crate::screens::Screen::Gameplay)),
+    );
+}
+
+fn player_input_system(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut player_query: Query<&mut Movement, With<Player>>,
+    config: Res<GameConfig>,
+    game_state: Res<GameState>,
+) {
+    // Only handle input if the game is active
+    if !game_state.is_game_active() {
+        return;
+    }
+
+    let Ok(mut movement) = player_query.single_mut() else {
+        return;
+    };
+
+    let mut input_direction = Vec2::ZERO;
+
+    // Handle arrow keys and WASD
+    if keyboard.pressed(KeyCode::ArrowUp) || keyboard.pressed(KeyCode::KeyW) {
+        input_direction.y += 1.0;
+    }
+    if keyboard.pressed(KeyCode::ArrowDown) || keyboard.pressed(KeyCode::KeyS) {
+        input_direction.y -= 1.0;
+    }
+    if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
+        input_direction.x -= 1.0;
+    }
+    if keyboard.pressed(KeyCode::ArrowRight) || keyboard.pressed(KeyCode::KeyD) {
+        input_direction.x += 1.0;
+    }
+
+    if input_direction != Vec2::ZERO {
+        // Normalize diagonal movement to prevent faster diagonal speed
+        if input_direction.x != 0.0 && input_direction.y != 0.0 {
+            input_direction *= config.diagonal_movement_normalizer;
+        }
+
+        // Calculate rotation to face movement direction
+        movement.rotation = input_direction.y.atan2(input_direction.x);
+
+        // Update velocity
+        movement.velocity = input_direction * config.player_speed;
+    } else {
+        movement.velocity = Vec2::ZERO;
+    }
+}
+
+/// ECS version of player input system using new components
+fn player_input_ecs_system(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut player_query: Query<(&mut Velocity, &mut Transform, &MaxSpeed), (With<Player>, With<PlayerTarget>)>,
+    config: Res<GameConfig>,
+    game_state: Res<GameState>,
+) {
+    // Only handle input if the game is active
+    if !game_state.is_game_active() {
+        return;
+    }
+
+    let Ok((mut velocity, mut transform, max_speed)) = player_query.single_mut() else {
+        return;
+    };
+
+    let mut input_direction = Vec2::ZERO;
+
+    // Handle arrow keys and WASD
+    if keyboard.pressed(KeyCode::ArrowUp) || keyboard.pressed(KeyCode::KeyW) {
+        input_direction.y += 1.0;
+    }
+    if keyboard.pressed(KeyCode::ArrowDown) || keyboard.pressed(KeyCode::KeyS) {
+        input_direction.y -= 1.0;
+    }
+    if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
+        input_direction.x -= 1.0;
+    }
+    if keyboard.pressed(KeyCode::ArrowRight) || keyboard.pressed(KeyCode::KeyD) {
+        input_direction.x += 1.0;
+    }
+
+    if input_direction != Vec2::ZERO {
+        // Normalize diagonal movement to prevent faster diagonal speed
+        if input_direction.x != 0.0 && input_direction.y != 0.0 {
+            input_direction *= config.diagonal_movement_normalizer;
+        }
+
+        // Calculate rotation to face movement direction
+        let rotation = input_direction.y.atan2(input_direction.x);
+        transform.rotation = Quat::from_rotation_z(rotation);
+
+        // Update velocity
+        velocity.0 = input_direction * max_speed.0;
+    } else {
+        velocity.0 = Vec2::ZERO;
+    }
+} 
