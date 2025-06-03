@@ -119,17 +119,9 @@ pub struct TurnRate(pub f32);
 
 // ==================== New ECS Behavior Components ====================
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Default)]
 pub struct TrackTarget {
     pub target_entity: Option<Entity>,
-}
-
-impl Default for TrackTarget {
-    fn default() -> Self {
-        Self {
-            target_entity: None,
-        }
-    }
 }
 
 #[derive(Component, Reflect)]
@@ -241,29 +233,19 @@ impl LifetimeTimer {
 
 // ==================== New ECS State Components ====================
 
-#[derive(Component, Reflect, Clone, Copy, PartialEq)]
+#[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
 pub enum KeziaState {
+    #[default]
     Tracking,
     MovingStraight,
 }
 
-impl Default for KeziaState {
-    fn default() -> Self {
-        KeziaState::Tracking
-    }
-}
-
-#[derive(Component, Reflect, Clone, Copy, PartialEq)]
+#[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
 pub enum NewJoelState {
+    #[default]
     Approaching,
     Tracking,
     Retreating,
-}
-
-impl Default for NewJoelState {
-    fn default() -> Self {
-        NewJoelState::Approaching
-    }
 }
 
 // ==================== Legacy Enemy Components ====================
@@ -310,31 +292,21 @@ impl Joel {
     }
 }
 
-#[derive(Reflect, Clone, Copy, PartialEq)]
+#[derive(Reflect, Clone, Copy, PartialEq, Default)]
 pub enum JoelState {
+    #[default]
     Approaching,
     Tracking,
     Retreating,
 }
 
-impl Default for JoelState {
-    fn default() -> Self {
-        JoelState::Approaching
-    }
-}
-
-#[derive(Reflect, Clone, Copy, PartialEq)]
+#[derive(Reflect, Clone, Copy, PartialEq, Default)]
 pub enum SpawnSide {
+    #[default]
     Top,
     Right,
     Bottom,
     Left,
-}
-
-impl Default for SpawnSide {
-    fn default() -> Self {
-        SpawnSide::Top
-    }
 }
 
 // ==================== Projectile Components ====================
