@@ -210,7 +210,8 @@ jobs:
           cargo binstall --locked --no-confirm --force wasm-bindgen-cli
           cargo binstall --locked --no-confirm --force wasm-opt
           bevy build --locked --release --features='${{ matrix.features }}' --yes web --bundle
-          mv 'target/bevy_web/web-release/${{ env.cargo_build_binary_name }}' '${{ env.app }}'
+          # For web builds, copy files directly to avoid nested folder structure for itch.io compatibility
+          cp -r 'target/bevy_web/web-release/${{ env.cargo_build_binary_name }}'/* '${{ env.app }}/'
 
       - name: Build and add binaries to app (non-Web)
         if: ${{ env.is_platform_enabled == 'true' && matrix.platform != 'web' }}
@@ -270,6 +271,10 @@ jobs:
           if [ '${{ matrix.platform }}' = 'macos' ]; then
             ln -s /Applications .
             hdiutil create -fs HFS+ -volname '${{ env.app_package_name }}' -srcfolder . '${{ env.package }}'
+          elif [ '${{ matrix.platform }}' = 'web' ]; then
+            # For web builds, zip contents directly to put index.html at zip root for itch.io compatibility
+            cd '${{ env.app_package_name }}'
+            zip --recurse-paths '../${{ env.package }}' .
           else
             zip --recurse-paths '${{ env.package }}' '${{ env.app_package_name }}'
           fi
@@ -278,7 +283,14 @@ jobs:
         if: ${{ env.is_platform_enabled == 'true' && matrix.platform == 'windows' }}
         working-directory: tmp/app
         shell: pwsh
-        run: Compress-Archive -Path '${{ env.app_package_name }}' -DestinationPath '${{ env.package }}'
+        run: |
+          if ('${{ matrix.platform }}' -eq 'web') {
+            # For web builds, zip contents directly to put index.html at zip root for itch.io compatibility
+            Set-Location '${{ env.app_package_name }}'
+            Compress-Archive -Path '*' -DestinationPath '../${{ env.package }}'
+          } else {
+            Compress-Archive -Path '${{ env.app_package_name }}' -DestinationPath '${{ env.package }}'
+          }
 
       - name: Upload package to workflow artifacts
         if: ${{ env.is_platform_enabled == 'true' }}
