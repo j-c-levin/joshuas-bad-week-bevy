@@ -6,7 +6,7 @@ use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            Joel, KeziaState, LifetimeTimer, MaxSpeed, MoveInDirection, MoveTowardsPoint,
+            Joel, KeziaState, MaxSpeed, MoveInDirection, MoveTowardsPoint,
             NewJoelState, PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
             TurnRate, Velocity,
         },
@@ -67,7 +67,6 @@ pub(super) fn plugin(app: &mut App) {
         (
             // Phase 3: Other effects that don't affect movement
             projectile_launcher_system,
-            lifetime_timer_system,
         )
             .in_set(BehaviorPhase::Effects),
     );
@@ -87,11 +86,9 @@ fn move_in_direction_system(
     mut query: Query<(&mut Velocity, &Transform, &MaxSpeed), With<MoveInDirection>>,
 ) {
     for (mut velocity, transform, max_speed) in &mut query {
-        // If velocity is zero or very small, set it based on current rotation
-        if velocity.0.length() < 0.1 {
-            let rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
-            velocity.0 = Vec2::new(rotation.cos(), rotation.sin()) * max_speed.0;
-        }
+        // Always set velocity based on current rotation for entities with MoveInDirection
+        let rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
+        velocity.0 = Vec2::new(rotation.cos(), rotation.sin()) * max_speed.0;
     }
 }
 
@@ -203,23 +200,6 @@ fn timer_tick_system(time: Res<Time>, mut timer_query: Query<&mut Timer>) {
     }
 }
 
-/// Handle lifetime timers and despawn expired entities
-fn lifetime_timer_system(
-    time: Res<Time>,
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut LifetimeTimer)>,
-) {
-    let delta = time.delta_secs();
-
-    for (entity, mut lifetime) in &mut query {
-        lifetime.remaining -= delta;
-
-        if lifetime.remaining <= 0.0 {
-            commands.entity(entity).try_despawn();
-        }
-    }
-}
-
 // ==================== State-Specific Systems ====================
 
 /// Handle Kezia state transitions
@@ -229,28 +209,25 @@ fn kezia_state_system(
         Entity,
         &mut KeziaState,
         &mut Timer,
-        &mut Velocity,
+        &Velocity,
         &mut Transform,
-        &MaxSpeed,
     )>,
 ) {
-    for (entity, mut state, timer, mut velocity, mut transform, max_speed) in &mut query {
+    for (entity, mut state, timer, velocity, mut transform) in &mut query {
         match *state {
             KeziaState::Tracking => {
-                // During tracking, ensure velocity matches rotation direction (forward movement)
-                let rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
-                velocity.0 = Vec2::new(rotation.cos(), rotation.sin()) * max_speed.0;
-
+                // During tracking, movement is handled by rotate_towards_target_system and move_in_direction_system
+                // The rotate_towards_target_system rotates the entity toward the player
+                // The move_in_direction_system sets velocity based on current rotation
+                
                 if timer.is_finished() {
                     *state = KeziaState::MovingStraight;
 
                     // Remove RotateTowardsTarget component when transitioning to MovingStraight
                     commands.entity(entity).remove::<RotateTowardsTarget>();
 
-                    // Set velocity to continue in current direction (which is already correct from above)
-                    // Update rotation to match velocity direction for consistent movement
-                    let velocity_angle = velocity.0.y.atan2(velocity.0.x);
-                    transform.rotation = Quat::from_rotation_z(velocity_angle);
+                    // Velocity and rotation are already set correctly by the movement systems
+                    // move_in_direction_system will continue to maintain forward movement
                 }
             }
             KeziaState::MovingStraight => {

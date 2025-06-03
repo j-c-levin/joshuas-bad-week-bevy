@@ -7,7 +7,7 @@ use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, KeziaState, LifetimeTimer,
+            Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, KeziaState,
             MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState, OffScreenCleanup, Player,
             PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
             TurnRate, Velocity,
@@ -26,7 +26,6 @@ pub(super) fn plugin(app: &mut App) {
             handle_enemy_spawn_events,
             handle_card_spawn_events,
             spawn_initial_player_ecs,
-            update_card_lifetime,
         )
             .in_set(AppSystems::Update)
             .in_set(PausableSystems)
@@ -130,23 +129,6 @@ fn handle_card_spawn_events(
 ) {
     for event in events.read() {
         spawn_card_ecs(&mut commands, event.position, event.direction, &config);
-    }
-}
-
-/// Update card lifetime and despawn expired cards
-fn update_card_lifetime(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut lifetime_query: Query<(Entity, &mut LifetimeTimer)>,
-) {
-    let delta = time.delta_secs();
-
-    for (entity, mut lifetime) in &mut lifetime_query {
-        lifetime.remaining -= delta;
-
-        if lifetime.remaining <= 0.0 {
-            commands.entity(entity).try_despawn();
-        }
     }
 }
 
@@ -347,7 +329,6 @@ fn spawn_card_ecs(commands: &mut Commands, position: Vec2, direction: Vec2, conf
         Card,
         Velocity(direction * config.card_speed),
         MoveInDirection,
-        LifetimeTimer::new(5.0),
         CollisionBox::new(Vec2::new(config.card_width, config.card_height)),
         Damage,
         OffScreenCleanup,

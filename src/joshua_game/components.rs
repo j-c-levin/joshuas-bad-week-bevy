@@ -18,7 +18,6 @@ pub(super) fn plugin(app: &mut App) {
         .register_type::<MoveTowardsPoint>()
         .register_type::<ProjectileLauncher>()
         .register_type::<Timer>()
-        .register_type::<LifetimeTimer>()
         .register_type::<KeziaState>()
         .register_type::<NewJoelState>()
         .register_type::<Card>();
@@ -183,19 +182,6 @@ impl Timer {
 
     pub fn reset(&mut self) {
         self.elapsed = 0.0;
-    }
-}
-
-#[derive(Component, Reflect)]
-pub struct LifetimeTimer {
-    pub remaining: f32,
-}
-
-impl LifetimeTimer {
-    pub fn new(lifetime: f32) -> Self {
-        Self {
-            remaining: lifetime,
-        }
     }
 }
 

@@ -56,7 +56,7 @@ fn cleanup_offscreen_entities(
 ) {
     let screen_half_width = config.screen_width / 2.0;
     let screen_half_height = config.screen_height / 2.0;
-    let margin = 100.0; // Extra margin before cleanup
+    let margin = config.spawn_distance; // Use same distance as spawn margin for consistency
 
     for (entity, transform, collision_box) in &query {
         let pos = transform.translation.xy();
