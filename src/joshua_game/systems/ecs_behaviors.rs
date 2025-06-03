@@ -3,17 +3,16 @@
 use bevy::prelude::*;
 
 use crate::{
+    AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            PlayerTarget, Velocity, MaxSpeed, TurnRate, TrackTarget, RotateTowardsTarget,
-            MoveTowardsPoint, ProjectileLauncher, Timer, LifetimeTimer, KeziaState, NewJoelState,
-            MoveInDirection, Joel,
+            Joel, KeziaState, LifetimeTimer, MaxSpeed, MoveInDirection, MoveTowardsPoint,
+            NewJoelState, PlayerTarget, ProjectileLauncher, RotateTowardsTarget, Timer,
+            TrackTarget, TurnRate, Velocity,
         },
-        config::GameConfig,
-        resources::GameState,
         events::CardSpawnEvent,
+        resources::GameState,
     },
-    AppSystems, PausableSystems,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -24,22 +23,18 @@ pub(super) fn plugin(app: &mut App) {
             velocity_system,
             apply_max_speed_system,
             move_in_direction_system,
-            
             // Timer system
             timer_tick_system,
-            
-            // Behavior systems  
+            // Behavior systems
             track_target_system,
             track_velocity_system,
             rotate_towards_target_system,
             move_towards_point_system,
             projectile_launcher_system,
             lifetime_timer_system,
-            
             // State machines
             kezia_state_system,
             joel_state_system,
-            
             // Target finding system
             find_player_targets_system,
         )
@@ -67,9 +62,7 @@ fn velocity_system(
 }
 
 /// Ensure velocity doesn't exceed max speed
-fn apply_max_speed_system(
-    mut query: Query<(&mut Velocity, &MaxSpeed)>,
-) {
+fn apply_max_speed_system(mut query: Query<(&mut Velocity, &MaxSpeed)>) {
     for (mut velocity, max_speed) in &mut query {
         if velocity.0.length() > max_speed.0 {
             velocity.0 = velocity.0.normalize() * max_speed.0;
@@ -106,7 +99,7 @@ fn track_target_system(
                 info!("Set tracking target to player entity {:?}", player_entity);
             }
         }
-        
+
         // Set target for all rotation entities that don't have one
         for mut rotate_target in &mut rotate_query {
             if rotate_target.target_entity.is_none() {
@@ -121,11 +114,30 @@ fn track_target_system(
 fn rotate_towards_target_system(
     time: Res<Time>,
     target_query: Query<&Transform, With<PlayerTarget>>,
-    mut kezia_rotate_query: Query<(&RotateTowardsTarget, &mut Transform, &TurnRate, &KeziaState), (Without<PlayerTarget>, With<KeziaState>, Without<NewJoelState>)>,
-    mut joel_rotate_query: Query<(&RotateTowardsTarget, &mut Transform, &TurnRate, &NewJoelState), (Without<PlayerTarget>, With<NewJoelState>, Without<KeziaState>)>,
+    mut kezia_rotate_query: Query<
+        (&RotateTowardsTarget, &mut Transform, &TurnRate, &KeziaState),
+        (
+            Without<PlayerTarget>,
+            With<KeziaState>,
+            Without<NewJoelState>,
+        ),
+    >,
+    mut joel_rotate_query: Query<
+        (
+            &RotateTowardsTarget,
+            &mut Transform,
+            &TurnRate,
+            &NewJoelState,
+        ),
+        (
+            Without<PlayerTarget>,
+            With<NewJoelState>,
+            Without<KeziaState>,
+        ),
+    >,
 ) {
     let delta = time.delta_secs();
-    
+
     // Handle Kezia rotation
     for (rotate_target, mut transform, turn_rate, kezia_state) in &mut kezia_rotate_query {
         match *kezia_state {
@@ -133,14 +145,16 @@ fn rotate_towards_target_system(
                 // Rotate towards player during tracking
                 if let Some(target_entity) = rotate_target.target_entity {
                     if let Ok(target_transform) = target_query.get(target_entity) {
-                        let direction = target_transform.translation.xy() - transform.translation.xy();
+                        let direction =
+                            target_transform.translation.xy() - transform.translation.xy();
                         if direction.length() > 0.1 {
-                            let target_rotation = direction.y.atan2(direction.x) + rotate_target.offset_angle;
+                            let target_rotation =
+                                direction.y.atan2(direction.x) + rotate_target.offset_angle;
                             let current_rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
-                            
+
                             // Calculate shortest rotation path (prevents 180° flipping)
                             let mut rotation_diff = target_rotation - current_rotation;
-                            
+
                             // Normalize to [-π, π] range
                             while rotation_diff > std::f32::consts::PI {
                                 rotation_diff -= 2.0 * std::f32::consts::PI;
@@ -148,25 +162,25 @@ fn rotate_towards_target_system(
                             while rotation_diff < -std::f32::consts::PI {
                                 rotation_diff += 2.0 * std::f32::consts::PI;
                             }
-                            
+
                             // Apply rotation with speed limit
                             let max_rotation = turn_rate.0 * delta;
                             let actual_rotation = rotation_diff.clamp(-max_rotation, max_rotation);
-                            
+
                             let new_rotation = current_rotation + actual_rotation;
                             transform.rotation = Quat::from_rotation_z(new_rotation);
                         }
                     }
                 }
-            },
+            }
             KeziaState::MovingStraight => {
                 // During MovingStraight, rotation should match velocity direction
                 // This is handled by the velocity update in kezia_state_system
                 // No additional rotation needed here
-            },
+            }
         }
     }
-    
+
     // Handle Joel rotation
     for (rotate_target, mut transform, turn_rate, joel_state) in &mut joel_rotate_query {
         match *joel_state {
@@ -174,14 +188,16 @@ fn rotate_towards_target_system(
                 // Rotate towards player during tracking
                 if let Some(target_entity) = rotate_target.target_entity {
                     if let Ok(target_transform) = target_query.get(target_entity) {
-                        let direction = target_transform.translation.xy() - transform.translation.xy();
+                        let direction =
+                            target_transform.translation.xy() - transform.translation.xy();
                         if direction.length() > 0.1 {
-                            let target_rotation = direction.y.atan2(direction.x) + rotate_target.offset_angle;
+                            let target_rotation =
+                                direction.y.atan2(direction.x) + rotate_target.offset_angle;
                             let current_rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
-                            
+
                             // Calculate shortest rotation path (prevents 180° flipping)
                             let mut rotation_diff = target_rotation - current_rotation;
-                            
+
                             // Normalize to [-π, π] range
                             while rotation_diff > std::f32::consts::PI {
                                 rotation_diff -= 2.0 * std::f32::consts::PI;
@@ -189,20 +205,20 @@ fn rotate_towards_target_system(
                             while rotation_diff < -std::f32::consts::PI {
                                 rotation_diff += 2.0 * std::f32::consts::PI;
                             }
-                            
+
                             // Apply rotation with speed limit
                             let max_rotation = turn_rate.0 * delta;
                             let actual_rotation = rotation_diff.clamp(-max_rotation, max_rotation);
-                            
+
                             let new_rotation = current_rotation + actual_rotation;
                             transform.rotation = Quat::from_rotation_z(new_rotation);
                         }
                     }
                 }
-            },
+            }
             NewJoelState::Approaching | NewJoelState::Retreating => {
                 // No rotation during approaching or retreating
-            },
+            }
         }
     }
 }
@@ -211,10 +227,14 @@ fn rotate_towards_target_system(
 fn move_towards_point_system(
     mut query: Query<(&mut MoveTowardsPoint, &Transform, &mut Velocity, &MaxSpeed)>,
 ) {
-    for (mut move_towards, transform, mut velocity, max_speed) in &mut query {
-        let direction = (move_towards.target_position - transform.translation.xy()).normalize_or_zero();
-        let distance = transform.translation.xy().distance(move_towards.target_position);
-        
+    for (move_towards, transform, mut velocity, max_speed) in &mut query {
+        let direction =
+            (move_towards.target_position - transform.translation.xy()).normalize_or_zero();
+        let distance = transform
+            .translation
+            .xy()
+            .distance(move_towards.target_position);
+
         if distance <= move_towards.stop_distance {
             velocity.0 = Vec2::ZERO;
         } else {
@@ -231,21 +251,23 @@ fn projectile_launcher_system(
     mut spawn_events: EventWriter<CardSpawnEvent>,
 ) {
     let delta = time.delta_secs();
-    
+
     for (mut launcher, transform) in &mut launcher_query {
         launcher.timer += delta;
-        
+
         if launcher.timer >= launcher.fire_rate {
             if let Some(target_entity) = launcher.target_entity {
                 if let Ok(target_transform) = target_query.get(target_entity) {
-                    let direction = (target_transform.translation.xy() - transform.translation.xy()).normalize_or_zero();
-                    
-                    spawn_events.send(CardSpawnEvent {
+                    let direction = (target_transform.translation.xy()
+                        - transform.translation.xy())
+                    .normalize_or_zero();
+
+                    spawn_events.write(CardSpawnEvent {
                         position: transform.translation.xy(),
                         direction,
                         source: Entity::PLACEHOLDER, // TODO: Pass actual entity
                     });
-                    
+
                     launcher.timer = 0.0;
                 }
             }
@@ -256,12 +278,9 @@ fn projectile_launcher_system(
 // ==================== Utility Systems ====================
 
 /// Tick timers for all entities
-fn timer_tick_system(
-    time: Res<Time>,
-    mut timer_query: Query<&mut Timer>,
-) {
+fn timer_tick_system(time: Res<Time>, mut timer_query: Query<&mut Timer>) {
     let delta = time.delta_secs();
-    
+
     for mut timer in &mut timer_query {
         timer.tick(delta);
     }
@@ -274,10 +293,10 @@ fn lifetime_timer_system(
     mut query: Query<(Entity, &mut LifetimeTimer)>,
 ) {
     let delta = time.delta_secs();
-    
+
     for (entity, mut lifetime) in &mut query {
         lifetime.remaining -= delta;
-        
+
         if lifetime.remaining <= 0.0 {
             commands.entity(entity).despawn();
         }
@@ -288,7 +307,14 @@ fn lifetime_timer_system(
 
 /// Handle Kezia state transitions
 fn kezia_state_system(
-    mut query: Query<(&mut KeziaState, &mut TrackTarget, &mut Timer, &mut Velocity, &mut Transform, &MaxSpeed)>,
+    mut query: Query<(
+        &mut KeziaState,
+        &mut TrackTarget,
+        &mut Timer,
+        &mut Velocity,
+        &mut Transform,
+        &MaxSpeed,
+    )>,
 ) {
     for (mut state, mut track_target, timer, mut velocity, mut transform, max_speed) in &mut query {
         match *state {
@@ -300,12 +326,12 @@ fn kezia_state_system(
                     // Set velocity to continue in current direction
                     let rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
                     velocity.0 = Vec2::new(rotation.cos(), rotation.sin()) * max_speed.0;
-                    
+
                     // Update rotation to match velocity direction for consistent movement
                     let velocity_angle = velocity.0.y.atan2(velocity.0.x);
                     transform.rotation = Quat::from_rotation_z(velocity_angle);
                 }
-            },
+            }
             KeziaState::MovingStraight => {
                 // Continue moving straight - velocity is maintained by move_in_direction_system
                 // Ensure rotation stays aligned with movement direction
@@ -313,7 +339,7 @@ fn kezia_state_system(
                     let velocity_angle = velocity.0.y.atan2(velocity.0.x);
                     transform.rotation = Quat::from_rotation_z(velocity_angle);
                 }
-            },
+            }
         }
     }
 }
@@ -321,8 +347,8 @@ fn kezia_state_system(
 /// Handle Joel state transitions
 fn joel_state_system(
     mut query: Query<(
-        &mut NewJoelState, 
-        &mut MoveTowardsPoint, 
+        &mut NewJoelState,
+        &mut MoveTowardsPoint,
         &mut ProjectileLauncher,
         &mut Timer,
         &Transform,
@@ -332,32 +358,38 @@ fn joel_state_system(
     for (mut state, mut move_towards, _launcher, mut timer, transform, joel) in &mut query {
         match *state {
             NewJoelState::Approaching => {
-                let distance = transform.translation.xy().distance(move_towards.target_position);
+                let distance = transform
+                    .translation
+                    .xy()
+                    .distance(move_towards.target_position);
                 if distance <= move_towards.stop_distance {
                     info!("Joel transitioning from Approaching to Tracking");
                     *state = NewJoelState::Tracking;
                     timer.reset();
                 }
-            },
+            }
             NewJoelState::Tracking => {
                 if timer.is_finished() {
                     info!("Joel transitioning from Tracking to Retreating");
                     *state = NewJoelState::Retreating;
-                    
+
                     // Set retreat target position - move back toward spawn position and beyond
                     let current_pos = transform.translation.xy();
                     let spawn_pos = joel.spawn_position;
                     let retreat_direction = (spawn_pos - current_pos).normalize_or_zero();
-                    
+
                     // Set target position far off screen in retreat direction
                     move_towards.target_position = spawn_pos + retreat_direction * 500.0;
                     move_towards.stop_distance = 0.0; // Don't stop until off screen
-                    info!("Joel set to retreat to position: {:?}", move_towards.target_position);
+                    info!(
+                        "Joel set to retreat to position: {:?}",
+                        move_towards.target_position
+                    );
                 }
-            },
+            }
             NewJoelState::Retreating => {
                 // Continue retreating - handled by move_towards_point_system
-            },
+            }
         }
     }
 }
@@ -378,14 +410,14 @@ fn find_player_targets_system(
                 track_target.target_entity = Some(player_entity);
             }
         }
-        
+
         // Assign player target to all rotation components
         for mut rotate_target in &mut rotate_query {
             if rotate_target.target_entity.is_none() {
                 rotate_target.target_entity = Some(player_entity);
             }
         }
-        
+
         // Assign player target to all launchers
         for mut launcher in &mut launcher_query {
             if launcher.target_entity.is_none() {
@@ -398,17 +430,28 @@ fn find_player_targets_system(
 /// Update velocity to track target entities
 fn track_velocity_system(
     target_query: Query<&Transform, With<PlayerTarget>>,
-    mut tracker_query: Query<(&TrackTarget, &Transform, &mut Velocity, &MaxSpeed, &KeziaState), Without<PlayerTarget>>,
+    mut tracker_query: Query<
+        (
+            &TrackTarget,
+            &Transform,
+            &mut Velocity,
+            &MaxSpeed,
+            &KeziaState,
+        ),
+        Without<PlayerTarget>,
+    >,
 ) {
     for (track_target, transform, mut velocity, max_speed, kezia_state) in &mut tracker_query {
         // Only track velocity if in tracking state
         if matches!(*kezia_state, KeziaState::Tracking) {
             if let Some(target_entity) = track_target.target_entity {
                 if let Ok(target_transform) = target_query.get(target_entity) {
-                    let direction = (target_transform.translation.xy() - transform.translation.xy()).normalize_or_zero();
+                    let direction = (target_transform.translation.xy()
+                        - transform.translation.xy())
+                    .normalize_or_zero();
                     velocity.0 = direction * max_speed.0;
                 }
             }
         }
     }
-} 
+}

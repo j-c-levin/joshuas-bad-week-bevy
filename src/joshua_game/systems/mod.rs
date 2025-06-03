@@ -2,14 +2,14 @@
 
 use bevy::prelude::*;
 
+mod collision;
+mod ecs_behaviors;
+mod enemy_ai;
+mod game_state;
 mod input;
 mod movement;
-mod enemy_ai;
-mod ecs_behaviors;
-mod collision;
-mod spawning;
-mod game_state;
 mod rendering;
+mod spawning;
 mod ui;
 
 pub(super) fn plugin(app: &mut App) {
@@ -24,4 +24,4 @@ pub(super) fn plugin(app: &mut App) {
         rendering::plugin,
         ui::plugin,
     ));
-} 
+}

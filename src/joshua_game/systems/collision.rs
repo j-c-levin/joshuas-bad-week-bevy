@@ -3,13 +3,13 @@
 use bevy::prelude::*;
 
 use crate::{
+    AppSystems, PausableSystems,
     joshua_game::{
-        components::{Player, Kezia, Joel, Card, CollisionBox, Health},
-        events::{DamageEvent, DamageSource, GameOverEvent},
+        components::{Card, CollisionBox, Health, Joel, Kezia, Player},
         config::GameConfig,
+        events::{DamageEvent, DamageSource, GameOverEvent},
         resources::GameState,
     },
-    AppSystems, PausableSystems,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -30,7 +30,10 @@ pub(super) fn plugin(app: &mut App) {
 fn player_enemy_collision(
     player_query: Query<(Entity, &Transform, &CollisionBox), With<Player>>,
     kezia_query: Query<(Entity, &Transform, &CollisionBox), (With<Kezia>, Without<Player>)>,
-    joel_query: Query<(Entity, &Transform, &CollisionBox), (With<Joel>, Without<Player>, Without<Kezia>)>,
+    joel_query: Query<
+        (Entity, &Transform, &CollisionBox),
+        (With<Joel>, Without<Player>, Without<Kezia>),
+    >,
     mut damage_events: EventWriter<DamageEvent>,
     mut commands: Commands,
     config: Res<GameConfig>,
@@ -129,9 +132,11 @@ fn handle_damage_events(
     for damage_event in damage_events.read() {
         if let Ok(mut health) = health_query.get_mut(damage_event.target) {
             health.take_damage(damage_event.amount);
-            
-            info!("Entity took {} damage, health: {}/{}", 
-                  damage_event.amount, health.current, health.max);
+
+            info!(
+                "Entity took {} damage, health: {}/{}",
+                damage_event.amount, health.current, health.max
+            );
 
             if health.is_dead() {
                 game_over_events.write(GameOverEvent);
@@ -143,4 +148,4 @@ fn handle_damage_events(
 /// Check if two rectangles overlap
 fn rects_overlap(min1: Vec2, max1: Vec2, min2: Vec2, max2: Vec2) -> bool {
     !(max1.x < min2.x || max2.x < min1.x || max1.y < min2.y || max2.y < min1.y)
-} 
+}

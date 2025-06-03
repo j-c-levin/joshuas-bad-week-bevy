@@ -3,21 +3,18 @@
 use bevy::prelude::*;
 
 use crate::{
+    AppSystems, PausableSystems,
     joshua_game::{
-        components::{Player, Movement, PlayerTarget, Velocity, MaxSpeed},
+        components::{MaxSpeed, Movement, Player, PlayerTarget, Velocity},
         config::GameConfig,
         resources::GameState,
     },
-    AppSystems, PausableSystems,
 };
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            player_input_system,
-            player_input_ecs_system,
-        )
+        (player_input_system, player_input_ecs_system)
             .in_set(AppSystems::RecordInput)
             .in_set(PausableSystems)
             .run_if(in_state(crate::screens::Screen::Gameplay)),
@@ -74,7 +71,10 @@ fn player_input_system(
 /// ECS version of player input system using new components
 fn player_input_ecs_system(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&mut Velocity, &mut Transform, &MaxSpeed), (With<Player>, With<PlayerTarget>)>,
+    mut player_query: Query<
+        (&mut Velocity, &mut Transform, &MaxSpeed),
+        (With<Player>, With<PlayerTarget>),
+    >,
     config: Res<GameConfig>,
     game_state: Res<GameState>,
 ) {
@@ -118,4 +118,4 @@ fn player_input_ecs_system(
     } else {
         velocity.0 = Vec2::ZERO;
     }
-} 
+}

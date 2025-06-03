@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::joshua_game::components::{SpawnSide};
+use crate::joshua_game::components::SpawnSide;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_event::<DamageEvent>()
@@ -65,4 +65,4 @@ pub struct EnemyDeathEvent {
     pub entity: Entity,
     pub position: Vec2,
     pub enemy_type: EnemyType,
-} 
+}

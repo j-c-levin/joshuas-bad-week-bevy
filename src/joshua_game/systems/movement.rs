@@ -3,12 +3,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    joshua_game::{
-        components::{Player, Movement, CollisionBox, OffScreenCleanup, GameEntity},
-        config::GameConfig,
-        resources::{GameState},
-    },
     AppSystems, PausableSystems,
+    joshua_game::{
+        components::{CollisionBox, GameEntity, Movement, OffScreenCleanup, Player},
+        config::GameConfig,
+        resources::GameState,
+    },
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -92,4 +92,4 @@ fn cleanup_offscreen_entities(
             commands.entity(entity).despawn();
         }
     }
-} 
+}

@@ -3,13 +3,13 @@
 use bevy::prelude::*;
 
 use crate::{
-    joshua_game::{
-        events::{GameOverEvent, GameWinEvent},
-        resources::{GameState, DifficultyState},
-        config::GameConfig,
-        components::GameEntity,
-    },
     AppSystems, PausableSystems,
+    joshua_game::{
+        components::GameEntity,
+        config::GameConfig,
+        events::{GameOverEvent, GameWinEvent},
+        resources::{DifficultyState, GameState},
+    },
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -55,24 +55,23 @@ fn handle_game_over_events(
 ) {
     for _ in events.read() {
         game_state.set_game_over();
-        
+
         // Cleanup all game entities
         for entity in &entities {
             commands.entity(entity).despawn();
         }
-        
+
         info!("Game Over! Player died.");
     }
 }
 
 /// Handle game win events
-fn handle_game_win_events(
-    mut events: EventReader<GameWinEvent>,
-    game_state: Res<GameState>,
-) {
+fn handle_game_win_events(mut events: EventReader<GameWinEvent>, game_state: Res<GameState>) {
     for _ in events.read() {
-        info!("Game Won! Player survived {} seconds!", 
-              game_state.time_remaining_seconds());
+        info!(
+            "Game Won! Player survived {} seconds!",
+            game_state.time_remaining_seconds()
+        );
     }
 }
 
@@ -89,4 +88,4 @@ fn update_difficulty(
 
     let time_elapsed = config.game_duration_seconds - game_state.time_remaining;
     difficulty.update_difficulty(time_elapsed, &config);
-} 
+}

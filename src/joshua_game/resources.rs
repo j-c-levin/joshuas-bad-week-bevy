@@ -27,31 +27,31 @@ impl GameState {
     pub fn time_remaining_seconds(&self) -> i32 {
         self.time_remaining.ceil() as i32
     }
-    
+
     pub fn is_game_active(&self) -> bool {
         matches!(self.state, GameStateEnum::Playing)
     }
-    
+
     pub fn is_game_won(&self) -> bool {
         matches!(self.state, GameStateEnum::Won)
     }
-    
+
     pub fn is_game_over(&self) -> bool {
         matches!(self.state, GameStateEnum::GameOver)
     }
-    
+
     pub fn set_game_over(&mut self) {
         if self.state == GameStateEnum::Playing {
             self.state = GameStateEnum::GameOver;
         }
     }
-    
+
     pub fn set_game_won(&mut self) {
         if self.state == GameStateEnum::Playing {
             self.state = GameStateEnum::Won;
         }
     }
-    
+
     pub fn reset(&mut self) {
         self.time_remaining = 120.0;
         self.state = GameStateEnum::Playing;
@@ -81,22 +81,26 @@ impl Default for DifficultyState {
             kezia_spawn_timer: 0.0,
             joel_spawn_timer: 0.0,
             current_kezia_interval: 2.0, // Start with 2 second intervals
-            current_joel_interval: 8.0, // Joel spawns less frequently
+            current_joel_interval: 8.0,  // Joel spawns less frequently
         }
     }
 }
 
 impl DifficultyState {
-    pub fn update_difficulty(&mut self, time_elapsed: f32, config: &crate::joshua_game::config::GameConfig) {
+    pub fn update_difficulty(
+        &mut self,
+        time_elapsed: f32,
+        config: &crate::joshua_game::config::GameConfig,
+    ) {
         // Calculate difficulty progression (0.0 to 1.0 over 90 seconds)
         let difficulty_progress = (time_elapsed / config.difficulty_ramp_duration).min(1.0);
-        
+
         // Interpolate between initial and minimum spawn intervals
-        self.current_kezia_interval = config.initial_spawn_interval 
+        self.current_kezia_interval = config.initial_spawn_interval
             - (config.initial_spawn_interval - config.min_spawn_interval) * difficulty_progress;
-            
+
         // Joel spawning gets more frequent too, but less aggressively
         self.current_joel_interval = 8.0 - 5.0 * difficulty_progress;
         self.current_joel_interval = self.current_joel_interval.max(2.0);
     }
-} 
+}

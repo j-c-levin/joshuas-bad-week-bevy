@@ -3,25 +3,17 @@
 use bevy::prelude::*;
 
 use crate::{
-    joshua_game::{
-        components::{Player, Kezia, Joel, Card, Health, GameEntity, PlayerTarget},
-        config::GameConfig,
-        resources::GameState,
-    },
     AppSystems, PausableSystems,
+    joshua_game::{
+        components::{Card, Joel, Kezia, Player},
+        config::GameConfig,
+    },
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
-        Startup,
-        setup_camera,
-    )
-    .add_systems(
+    app.add_systems(Startup, setup_camera).add_systems(
         Update,
-        (
-            setup_entity_sprites,
-            update_sprite_colors,
-        )
+        (setup_entity_sprites, update_sprite_colors)
             .in_set(AppSystems::Update)
             .in_set(PausableSystems)
             .run_if(in_state(crate::screens::Screen::Gameplay)),
@@ -35,14 +27,8 @@ struct EntitySprite;
 struct GameplayCamera;
 
 /// Setup the 2D camera for gameplay - run once on startup
-fn setup_camera(
-    mut commands: Commands,
-) {
-    commands.spawn((
-        Name::new("Gameplay Camera"),
-        Camera2d,
-        GameplayCamera,
-    ));
+fn setup_camera(mut commands: Commands) {
+    commands.spawn((Name::new("Gameplay Camera"), Camera2d, GameplayCamera));
 }
 
 /// Add sprite components to entities that need visual representation
@@ -107,7 +93,10 @@ fn setup_entity_sprites(
 /// Update sprite colors based on game state (health, charging, etc.)
 fn update_sprite_colors(
     config: Res<GameConfig>,
-    mut player_query: Query<(&mut Sprite, &crate::joshua_game::components::Health), (With<Player>, With<EntitySprite>)>,
+    mut player_query: Query<
+        (&mut Sprite, &crate::joshua_game::components::Health),
+        (With<Player>, With<EntitySprite>),
+    >,
     mut joel_query: Query<(&mut Sprite, &Joel), (With<Joel>, With<EntitySprite>, Without<Player>)>,
 ) {
     // Update player color based on health
@@ -128,4 +117,4 @@ fn update_sprite_colors(
             sprite.color = config.joel_color;
         }
     }
-} 
+}

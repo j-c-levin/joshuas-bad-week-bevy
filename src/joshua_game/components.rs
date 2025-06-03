@@ -59,15 +59,15 @@ impl Health {
     pub fn new(max: i32) -> Self {
         Self { current: max, max }
     }
-    
+
     pub fn take_damage(&mut self, damage: i32) {
         self.current = (self.current - damage).max(0);
     }
-    
+
     pub fn is_dead(&self) -> bool {
         self.current <= 0
     }
-    
+
     pub fn health_ratio(&self) -> f32 {
         self.current as f32 / self.max as f32
     }
@@ -101,7 +101,7 @@ impl CollisionBox {
     pub fn new(size: Vec2) -> Self {
         Self { size }
     }
-    
+
     pub fn get_rect(&self, position: Vec2) -> (Vec2, Vec2) {
         let half_size = self.size / 2.0;
         (position - half_size, position + half_size)
@@ -212,7 +212,7 @@ impl Timer {
             repeating,
         }
     }
-    
+
     pub fn tick(&mut self, delta: f32) -> bool {
         self.elapsed += delta;
         if self.elapsed >= self.duration {
@@ -224,11 +224,11 @@ impl Timer {
             false
         }
     }
-    
+
     pub fn is_finished(&self) -> bool {
         self.elapsed >= self.duration
     }
-    
+
     pub fn reset(&mut self) {
         self.elapsed = 0.0;
     }
@@ -365,4 +365,4 @@ impl Card {
 pub struct OffScreenCleanup;
 
 #[derive(Component)]
-pub struct GameEntity; // Marker for entities that should be cleaned up when the game ends 
+pub struct GameEntity; // Marker for entities that should be cleaned up when the game ends

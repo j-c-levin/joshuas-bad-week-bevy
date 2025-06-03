@@ -4,19 +4,18 @@ use bevy::prelude::*;
 use rand::prelude::*;
 
 use crate::{
+    AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            Player, Kezia, Joel, Card, Movement, CollisionBox, Health, OffScreenCleanup, 
-            GameEntity, SpawnSide,
-            PlayerTarget, Velocity, MaxSpeed, TurnRate, TrackTarget, RotateTowardsTarget,
-            MoveTowardsPoint, ProjectileLauncher, Timer, LifetimeTimer, KeziaState, NewJoelState,
-            MoveInDirection,
+            Card, CollisionBox, GameEntity, Health, Joel, Kezia, KeziaState, LifetimeTimer,
+            MaxSpeed, MoveInDirection, MoveTowardsPoint, Movement, NewJoelState, OffScreenCleanup,
+            Player, PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
+            TrackTarget, TurnRate, Velocity,
         },
         config::GameConfig,
-        resources::{GameState, DifficultyState},
-        events::{EnemySpawnEvent, EnemyType, CardSpawnEvent},
+        events::{CardSpawnEvent, EnemySpawnEvent, EnemyType},
+        resources::{DifficultyState, GameState},
     },
-    AppSystems, PausableSystems,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -83,7 +82,7 @@ fn spawn_enemies_system(
     // Spawn Kezia enemies
     if difficulty.kezia_spawn_timer >= difficulty.current_kezia_interval {
         difficulty.kezia_spawn_timer = 0.0;
-        
+
         let (spawn_pos, spawn_side) = generate_spawn_position(&config);
         spawn_events.write(EnemySpawnEvent {
             enemy_type: EnemyType::Kezia,
@@ -95,7 +94,7 @@ fn spawn_enemies_system(
     // Spawn Joel enemies (less frequently)
     if difficulty.joel_spawn_timer >= difficulty.current_joel_interval {
         difficulty.joel_spawn_timer = 0.0;
-        
+
         let (spawn_pos, spawn_side) = generate_spawn_position(&config);
         spawn_events.write(EnemySpawnEvent {
             enemy_type: EnemyType::Joel,
@@ -115,10 +114,10 @@ fn handle_enemy_spawn_events(
         match event.enemy_type {
             EnemyType::Kezia => {
                 spawn_kezia_ecs(&mut commands, event.position, &config);
-            },
+            }
             EnemyType::Joel => {
                 spawn_joel_ecs(&mut commands, event.position, event.spawn_side, &config);
-            },
+            }
         }
     }
 }
@@ -141,10 +140,10 @@ fn update_card_lifetime(
     mut card_query: Query<(Entity, &mut Card)>,
 ) {
     let delta = time.delta_secs();
-    
+
     for (entity, mut card) in &mut card_query {
         card.lifetime -= delta;
-        
+
         if card.lifetime <= 0.0 {
             commands.entity(entity).despawn();
         }
@@ -169,7 +168,7 @@ fn spawn_kezia(commands: &mut Commands, position: Vec2, config: &GameConfig) {
 /// Spawn a Joel enemy
 fn spawn_joel(commands: &mut Commands, position: Vec2, spawn_side: SpawnSide, config: &GameConfig) {
     let target_position = calculate_joel_target_position(spawn_side, config);
-    
+
     commands.spawn((
         Name::new("Joel"),
         Transform::from_translation(position.extend(0.0)),
@@ -188,7 +187,7 @@ fn spawn_card(commands: &mut Commands, position: Vec2, direction: Vec2, config: 
     let mut movement = Movement::new(config.card_speed, 0.0);
     movement.velocity = direction * config.card_speed;
     movement.rotation = direction.y.atan2(direction.x);
-    
+
     commands.spawn((
         Name::new("Card"),
         Transform::from_translation(position.extend(0.0)),
@@ -199,7 +198,10 @@ fn spawn_card(commands: &mut Commands, position: Vec2, direction: Vec2, config: 
         GameEntity,
     ));
 
-    info!("Card spawned at {:?} in direction {:?}", position, direction);
+    info!(
+        "Card spawned at {:?} in direction {:?}",
+        position, direction
+    );
 }
 
 /// Generate a random spawn position just off-screen
@@ -207,31 +209,35 @@ fn generate_spawn_position(config: &GameConfig) -> (Vec2, SpawnSide) {
     let mut rng = thread_rng();
     let side = rng.gen_range(0..4);
     let spawn_distance = config.kezia_spawn_distance;
-    
+
     let screen_half_width = config.screen_width / 2.0;
     let screen_half_height = config.screen_height / 2.0;
 
     match side {
-        0 => { // Top
+        0 => {
+            // Top
             let x = rng.gen_range(-screen_half_width..screen_half_width);
             let y = screen_half_height + spawn_distance;
             (Vec2::new(x, y), SpawnSide::Top)
-        },
-        1 => { // Right
+        }
+        1 => {
+            // Right
             let x = screen_half_width + spawn_distance;
             let y = rng.gen_range(-screen_half_height..screen_half_height);
             (Vec2::new(x, y), SpawnSide::Right)
-        },
-        2 => { // Bottom
+        }
+        2 => {
+            // Bottom
             let x = rng.gen_range(-screen_half_width..screen_half_width);
             let y = -screen_half_height - spawn_distance;
             (Vec2::new(x, y), SpawnSide::Bottom)
-        },
-        _ => { // Left
+        }
+        _ => {
+            // Left
             let x = -screen_half_width - spawn_distance;
             let y = rng.gen_range(-screen_half_height..screen_half_height);
             (Vec2::new(x, y), SpawnSide::Left)
-        },
+        }
     }
 }
 
@@ -272,9 +278,14 @@ fn spawn_kezia_ecs(commands: &mut Commands, position: Vec2, config: &GameConfig)
 }
 
 /// Spawn a Joel enemy using new ECS components
-fn spawn_joel_ecs(commands: &mut Commands, position: Vec2, spawn_side: SpawnSide, config: &GameConfig) {
+fn spawn_joel_ecs(
+    commands: &mut Commands,
+    position: Vec2,
+    spawn_side: SpawnSide,
+    config: &GameConfig,
+) {
     let target_position = calculate_joel_target_position(spawn_side, config);
-    
+
     commands.spawn((
         Name::new("Joel"),
         Transform::from_translation(position.extend(0.0)),
@@ -285,7 +296,11 @@ fn spawn_joel_ecs(commands: &mut Commands, position: Vec2, spawn_side: SpawnSide
         NewJoelState::default(),
         MoveTowardsPoint::new(target_position, 5.0),
         RotateTowardsTarget::new(std::f32::consts::PI / 2.0), // Joel faces perpendicular to player
-        ProjectileLauncher::new(config.joel_card_fire_rate, config.card_speed, config.card_damage),
+        ProjectileLauncher::new(
+            config.joel_card_fire_rate,
+            config.card_speed,
+            config.card_damage,
+        ),
         Timer::new(config.joel_tracking_duration, false),
         CollisionBox::new(Vec2::new(config.joel_width, config.joel_height)),
         OffScreenCleanup,
@@ -298,7 +313,7 @@ fn spawn_joel_ecs(commands: &mut Commands, position: Vec2, spawn_side: SpawnSide
 /// Spawn a card projectile using new ECS components
 fn spawn_card_ecs(commands: &mut Commands, position: Vec2, direction: Vec2, config: &GameConfig) {
     let rotation = direction.y.atan2(direction.x);
-    
+
     commands.spawn((
         Name::new("Card"),
         Transform {
@@ -315,5 +330,8 @@ fn spawn_card_ecs(commands: &mut Commands, position: Vec2, direction: Vec2, conf
         GameEntity,
     ));
 
-    info!("Card ECS spawned at {:?} in direction {:?}", position, direction);
-} 
+    info!(
+        "Card ECS spawned at {:?} in direction {:?}",
+        position, direction
+    );
+}

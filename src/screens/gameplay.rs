@@ -2,7 +2,7 @@
 
 use bevy::{input::common_conditions::input_just_pressed, prelude::*, ui::Val::*};
 
-use crate::{Pause, menus::Menu, screens::Screen, joshua_game::GameState};
+use crate::{Pause, joshua_game::GameState, menus::Menu, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Gameplay), spawn_joshua_game);
@@ -31,9 +31,7 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 /// Initialize Joshua's Bad Week game when entering gameplay
-fn spawn_joshua_game(
-    mut game_state: ResMut<GameState>,
-) {
+fn spawn_joshua_game(mut game_state: ResMut<GameState>) {
     // Reset game state when entering gameplay
     game_state.reset();
     info!("Joshua's Bad Week game initialized");

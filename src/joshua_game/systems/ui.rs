@@ -3,12 +3,12 @@
 use bevy::prelude::*;
 
 use crate::{
+    AppSystems, PausableSystems,
     joshua_game::{
-        components::{Player, Health},
+        components::{Health, Player},
         config::GameConfig,
         resources::GameState,
     },
-    AppSystems, PausableSystems,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -39,78 +39,78 @@ struct GameOverText;
 struct GameUI;
 
 /// Setup UI elements when gameplay starts
-fn setup_ui(
-    mut commands: Commands,
-    ui_query: Query<&GameUI>,
-    config: Res<GameConfig>,
-) {
+fn setup_ui(mut commands: Commands, ui_query: Query<&GameUI>, config: Res<GameConfig>) {
     // Only setup UI once
     if !ui_query.is_empty() {
         return;
     }
 
     // Create UI root
-    commands.spawn((
-        Name::new("Game UI"),
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            flex_direction: FlexDirection::Column,
-            justify_content: JustifyContent::SpaceBetween,
-            align_items: AlignItems::FlexStart,
-            ..default()
-        },
-        GameUI,
-    )).with_children(|parent| {
-        // Top section for health and timer
-        parent.spawn(Node {
-            width: Val::Percent(100.0),
-            flex_direction: FlexDirection::Row,
-            justify_content: JustifyContent::SpaceBetween,
-            align_items: AlignItems::FlexStart,
-            padding: UiRect::all(Val::Px(10.0)),
-            ..default()
-        }).with_children(|parent| {
-            // Health display
-            parent.spawn((
-                Text::new("Health: 10/10"),
-                TextFont {
-                    font_size: 24.0,
+    commands
+        .spawn((
+            Name::new("Game UI"),
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::SpaceBetween,
+                align_items: AlignItems::FlexStart,
+                ..default()
+            },
+            GameUI,
+        ))
+        .with_children(|parent| {
+            // Top section for health and timer
+            parent
+                .spawn(Node {
+                    width: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::FlexStart,
+                    padding: UiRect::all(Val::Px(10.0)),
                     ..default()
-                },
-                TextColor(config.ui_text_color),
-                HealthText,
-            ));
+                })
+                .with_children(|parent| {
+                    // Health display
+                    parent.spawn((
+                        Text::new("Health: 10/10"),
+                        TextFont {
+                            font_size: 24.0,
+                            ..default()
+                        },
+                        TextColor(config.ui_text_color),
+                        HealthText,
+                    ));
 
-            // Timer display
+                    // Timer display
+                    parent.spawn((
+                        Text::new("Time: 120"),
+                        TextFont {
+                            font_size: 24.0,
+                            ..default()
+                        },
+                        TextColor(config.ui_text_color),
+                        TimerText,
+                    ));
+                });
+
+            // Center section for game over message
             parent.spawn((
-                Text::new("Time: 120"),
+                Text::new(""),
                 TextFont {
-                    font_size: 24.0,
+                    font_size: 48.0,
                     ..default()
                 },
-                TextColor(config.ui_text_color),
-                TimerText,
+                TextColor(config.game_over_color),
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Percent(50.0),
+                    top: Val::Percent(50.0),
+                    ..default()
+                },
+                GameOverText,
             ));
         });
-
-        // Center section for game over message
-        parent.spawn((
-            Text::new(""),
-            TextFont {
-                font_size: 48.0,
-                ..default()
-            },
-            TextColor(config.game_over_color),
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Percent(50.0),
-                top: Val::Percent(50.0),
-                ..default()
-            },
-            GameOverText,
-        ));
-    });
 }
 
 /// Update health display
@@ -157,4 +157,4 @@ fn update_game_over_display(
     } else {
         **text = "".to_string();
     }
-} 
+}
