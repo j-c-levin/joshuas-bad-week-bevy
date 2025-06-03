@@ -202,7 +202,12 @@ fn calculate_joel_target_position(spawn_side: SpawnSide, config: &GameConfig) ->
 }
 
 /// Spawn a Kezia enemy using new ECS components
-fn spawn_kezia_ecs(commands: &mut Commands, position: Vec2, spawn_side: SpawnSide, config: &GameConfig) {
+fn spawn_kezia_ecs(
+    commands: &mut Commands,
+    position: Vec2,
+    spawn_side: SpawnSide,
+    config: &GameConfig,
+) {
     // Calculate initial rotation and velocity based on spawn side to enter screen properly
     let (initial_rotation, initial_velocity) = match spawn_side {
         SpawnSide::Top => {
@@ -252,7 +257,10 @@ fn spawn_kezia_ecs(commands: &mut Commands, position: Vec2, spawn_side: SpawnSid
         GameEntity,
     ));
 
-    info!("Kezia ECS spawned at {:?} from side {:?}", position, spawn_side);
+    info!(
+        "Kezia ECS spawned at {:?} from side {:?}",
+        position, spawn_side
+    );
 }
 
 /// Spawn a Joel enemy using new ECS components
@@ -317,7 +325,10 @@ fn spawn_joel_ecs(
         GameEntity,
     ));
 
-    info!("Joel ECS spawned at {:?} from side {:?}", position, spawn_side);
+    info!(
+        "Joel ECS spawned at {:?} from side {:?}",
+        position, spawn_side
+    );
 }
 
 /// Spawn a card projectile using new ECS components

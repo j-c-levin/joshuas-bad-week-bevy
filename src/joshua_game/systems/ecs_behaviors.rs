@@ -10,9 +10,9 @@ use crate::{
             NewJoelState, PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
             TrackTarget, TurnRate, Velocity,
         },
+        config::GameConfig,
         events::CardSpawnEvent,
         resources::GameState,
-        config::GameConfig,
     },
 };
 
@@ -359,9 +359,19 @@ fn joel_state_system(
     let screen_half_width = config.screen_width / 2.0;
     let screen_half_height = config.screen_height / 2.0;
 
-    for (mut state, mut move_towards, _launcher, mut timer, transform, joel, mut velocity, max_speed) in &mut query {
+    for (
+        mut state,
+        mut move_towards,
+        _launcher,
+        mut timer,
+        transform,
+        joel,
+        mut velocity,
+        max_speed,
+    ) in &mut query
+    {
         let current_pos = transform.translation.xy();
-        
+
         match *state {
             NewJoelState::Entering => {
                 // Check if Joel has entered the screen area
@@ -375,7 +385,7 @@ fn joel_state_system(
                 if has_entered_screen {
                     info!("Joel entered screen, transitioning from Entering to Approaching");
                     *state = NewJoelState::Approaching;
-                    
+
                     // Set velocity to move toward target position
                     let direction = (joel.target_position - current_pos).normalize_or_zero();
                     velocity.0 = direction * max_speed.0;
@@ -411,10 +421,10 @@ fn joel_state_system(
                     // Set target position far off screen in retreat direction
                     move_towards.target_position = spawn_pos + retreat_direction * 500.0;
                     move_towards.stop_distance = 0.0; // Don't stop until off screen
-                    
+
                     // Set retreat velocity
                     velocity.0 = retreat_direction * max_speed.0;
-                    
+
                     info!(
                         "Joel set to retreat to position: {:?}",
                         move_towards.target_position
@@ -480,9 +490,8 @@ fn track_velocity_system(
     for (track_target, transform, mut velocity, max_speed, _turn_rate) in &mut tracker_query {
         if let Some(target_entity) = track_target.target_entity {
             if let Ok(target_transform) = target_query.get(target_entity) {
-                let direction = (target_transform.translation.xy()
-                    - transform.translation.xy())
-                .normalize_or_zero();
+                let direction = (target_transform.translation.xy() - transform.translation.xy())
+                    .normalize_or_zero();
                 velocity.0 = direction * max_speed.0;
             }
         }
