@@ -6,7 +6,7 @@ use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            Joel, MaxSpeed, MoveInDirection, MoveTowardsPoint,
+            Joel, Kezia, MaxSpeed, MoveInDirection, MoveTowardsPoint,
             PlayerTarget, ProjectileLauncher, RotateTowardsTarget, Timer, TurnRate,
             Velocity,
         },
@@ -166,6 +166,7 @@ fn joel_start_tracking_system(
     mut commands: Commands,
     mut removed_move_towards: RemovedComponents<MoveTowardsPoint>,
     mut joel_query: Query<&mut Timer, With<Joel>>,
+    config: Res<GameConfig>,
 ) {
     for entity in removed_move_towards.read() {
         // Check if this entity is a Joel and in the appropriate state
@@ -179,6 +180,11 @@ fn joel_start_tracking_system(
             commands
                 .entity(entity)
                 .insert(RotateTowardsTarget::new(std::f32::consts::PI / 2.0));
+            
+            // Add ProjectileLauncher component to start firing cards
+            commands
+                .entity(entity)
+                .insert(ProjectileLauncher::new(config.joel_card_fire_rate, config.card_speed));
         }
     }
 }
@@ -228,7 +234,7 @@ fn timer_tick_system(time: Res<Time>, mut timer_query: Query<&mut Timer>) {
 // ==================== State-Specific Systems ====================
 
 /// Handle Kezia state transitions
-fn kezia_system(mut commands: Commands, mut query: Query<(Entity, &mut Timer)>) {
+fn kezia_system(mut commands: Commands, mut query: Query<(Entity, &mut Timer), With<Kezia>>) {
     for (entity, timer) in &mut query {
         if timer.is_finished() {
             commands.entity(entity).remove::<RotateTowardsTarget>();
@@ -246,7 +252,7 @@ fn joel_finish_tracking_system(
         &Joel,
         &mut Velocity,
         &MaxSpeed,
-    )>,
+    ), (With<RotateTowardsTarget>, Without<MoveTowardsPoint>)>,
     _config: Res<GameConfig>,
 ) {
     for (

@@ -9,7 +9,7 @@ use crate::{
         components::{
             Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, MaxSpeed, MoveInDirection,
             MoveTowardsPoint, OffScreenCleanup, Player, PlayerTarget,
-            ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer, TurnRate, Velocity,
+            RotateTowardsTarget, SpawnSide, Timer, TurnRate, Velocity,
         },
         config::GameConfig,
         events::{CardSpawnEvent, EnemySpawnEvent, EnemyType},
@@ -302,7 +302,6 @@ fn spawn_joel_ecs(
 
     // Add remaining components
     commands.entity(entity).insert((
-        ProjectileLauncher::new(config.joel_card_fire_rate, config.card_speed),
         Timer::new(config.joel_tracking_duration, false),
         CollisionBox::new(Vec2::new(config.joel_width, config.joel_height)),
         Damage,
