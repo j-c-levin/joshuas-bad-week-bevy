@@ -6,9 +6,9 @@ use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            Joel, KeziaState, MaxSpeed, MoveInDirection, MoveTowardsPoint,
-            NewJoelState, PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
-            TurnRate, Velocity,
+            Joel, MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState,
+            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer, TurnRate,
+            Velocity,
         },
         config::GameConfig,
         events::CardSpawnEvent,
@@ -86,7 +86,6 @@ fn move_in_direction_system(
     mut query: Query<(&mut Velocity, &Transform, &MaxSpeed), With<MoveInDirection>>,
 ) {
     for (mut velocity, transform, max_speed) in &mut query {
-        // Always set velocity based on current rotation for entities with MoveInDirection
         let rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
         velocity.0 = Vec2::new(rotation.cos(), rotation.sin()) * max_speed.0;
     }
@@ -104,7 +103,7 @@ fn rotate_towards_target_system(
     >,
 ) {
     let delta = time.delta_secs();
-    
+
     // Get the player position
     let Ok(player_transform) = player_query.single() else {
         return;
@@ -115,7 +114,7 @@ fn rotate_towards_target_system(
     for (rotate_target, mut transform, turn_rate) in &mut rotate_query {
         let current_pos = transform.translation.xy();
         let direction = player_pos - current_pos;
-        
+
         if direction.length() > 0.1 {
             let target_rotation = direction.y.atan2(direction.x) + rotate_target.offset_angle;
             let current_rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
@@ -166,7 +165,7 @@ fn projectile_launcher_system(
     mut spawn_events: EventWriter<CardSpawnEvent>,
 ) {
     let delta = time.delta_secs();
-    
+
     // Get the player position
     let Ok(player_transform) = player_query.single() else {
         return;
@@ -203,41 +202,10 @@ fn timer_tick_system(time: Res<Time>, mut timer_query: Query<&mut Timer>) {
 // ==================== State-Specific Systems ====================
 
 /// Handle Kezia state transitions
-fn kezia_state_system(
-    mut commands: Commands,
-    mut query: Query<(
-        Entity,
-        &mut KeziaState,
-        &mut Timer,
-        &Velocity,
-        &mut Transform,
-    )>,
-) {
-    for (entity, mut state, timer, velocity, mut transform) in &mut query {
-        match *state {
-            KeziaState::Tracking => {
-                // During tracking, movement is handled by rotate_towards_target_system and move_in_direction_system
-                // The rotate_towards_target_system rotates the entity toward the player
-                // The move_in_direction_system sets velocity based on current rotation
-                
-                if timer.is_finished() {
-                    *state = KeziaState::MovingStraight;
-
-                    // Remove RotateTowardsTarget component when transitioning to MovingStraight
-                    commands.entity(entity).remove::<RotateTowardsTarget>();
-
-                    // Velocity and rotation are already set correctly by the movement systems
-                    // move_in_direction_system will continue to maintain forward movement
-                }
-            }
-            KeziaState::MovingStraight => {
-                // Continue moving straight - velocity is maintained by move_in_direction_system
-                // Ensure rotation stays aligned with movement direction
-                if velocity.0.length() > 0.1 {
-                    let velocity_angle = velocity.0.y.atan2(velocity.0.x);
-                    transform.rotation = Quat::from_rotation_z(velocity_angle);
-                }
-            }
+fn kezia_state_system(mut commands: Commands, mut query: Query<(Entity, &mut Timer)>) {
+    for (entity, timer) in &mut query {
+        if timer.is_finished() {
+            commands.entity(entity).remove::<RotateTowardsTarget>();
         }
     }
 }
@@ -300,12 +268,14 @@ fn joel_state_system(
                     *state = NewJoelState::Tracking;
                     timer.reset();
                     velocity.0 = Vec2::ZERO; // Stop moving
-                    
+
                     // Remove MoveTowardsPoint component - no longer needed in tracking state
                     commands.entity(entity).remove::<MoveTowardsPoint>();
-                    
+
                     // Add RotateTowardsTarget component when entering tracking state
-                    commands.entity(entity).insert(RotateTowardsTarget::new(std::f32::consts::PI / 2.0));
+                    commands
+                        .entity(entity)
+                        .insert(RotateTowardsTarget::new(std::f32::consts::PI / 2.0));
                 }
                 // MoveTowardsPoint component handles movement to target position
             }
@@ -316,7 +286,7 @@ fn joel_state_system(
                 if timer.is_finished() {
                     info!("Joel transitioning from Tracking to Retreating");
                     *state = NewJoelState::Retreating;
-                    
+
                     // Remove RotateTowardsTarget component when leaving tracking state
                     commands.entity(entity).remove::<RotateTowardsTarget>();
 

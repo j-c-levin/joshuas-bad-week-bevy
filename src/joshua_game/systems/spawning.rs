@@ -7,10 +7,9 @@ use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, KeziaState,
-            MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState, OffScreenCleanup, Player,
-            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
-            TurnRate, Velocity,
+            Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, MaxSpeed, MoveInDirection,
+            MoveTowardsPoint, NewJoelState, OffScreenCleanup, Player, PlayerTarget,
+            ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer, TurnRate, Velocity,
         },
         config::GameConfig,
         events::{CardSpawnEvent, EnemySpawnEvent, EnemyType},
@@ -170,7 +169,11 @@ fn generate_spawn_position(config: &GameConfig) -> (Vec2, SpawnSide) {
 }
 
 /// Calculate Joel's target position (approach distance from spawn position towards screen)
-fn calculate_joel_target_position(spawn_position: Vec2, spawn_side: SpawnSide, config: &GameConfig) -> Vec2 {
+fn calculate_joel_target_position(
+    spawn_position: Vec2,
+    spawn_side: SpawnSide,
+    config: &GameConfig,
+) -> Vec2 {
     let approach_distance = config.spawn_distance + config.joel_approach_distance;
 
     match spawn_side {
@@ -216,21 +219,22 @@ fn spawn_kezia_ecs(
         }
     };
 
-    let entity = commands.spawn((
-        Name::new("Kezia"),
-        Transform {
-            translation: position.extend(0.0),
-            rotation: Quat::from_rotation_z(initial_rotation),
-            ..default()
-        },
-        Kezia::default(), // Keep marker component for rendering system
-        Velocity(initial_velocity),
-        MaxSpeed(config.kezia_speed),
-        TurnRate(config.kezia_turn_rate),
-        RotateTowardsTarget::new(0.0),
-        KeziaState::default(),
-        Timer::new(config.kezia_tracking_duration, false),
-    )).id();
+    let entity = commands
+        .spawn((
+            Name::new("Kezia"),
+            Transform {
+                translation: position.extend(0.0),
+                rotation: Quat::from_rotation_z(initial_rotation),
+                ..default()
+            },
+            Kezia::default(), // Keep marker component for rendering system
+            Velocity(initial_velocity),
+            MaxSpeed(config.kezia_speed),
+            TurnRate(config.kezia_turn_rate),
+            RotateTowardsTarget::new(0.0),
+            Timer::new(config.kezia_tracking_duration, false),
+        ))
+        .id();
 
     // Add remaining components
     commands.entity(entity).insert((
@@ -284,20 +288,22 @@ fn spawn_joel_ecs(
         }
     };
 
-    let entity = commands.spawn((
-        Name::new("Joel"),
-        Transform {
-            translation: position.extend(0.0),
-            rotation: Quat::from_rotation_z(initial_rotation),
-            ..default()
-        },
-        Joel::new(spawn_side, position, target_position), // Keep marker component for rendering system
-        Velocity(initial_velocity),
-        MaxSpeed(config.joel_speed),
-        TurnRate(config.joel_turn_rate),
-        NewJoelState::Entering, // Start with new entering state
-        MoveTowardsPoint::new(target_position, 5.0),
-    )).id();
+    let entity = commands
+        .spawn((
+            Name::new("Joel"),
+            Transform {
+                translation: position.extend(0.0),
+                rotation: Quat::from_rotation_z(initial_rotation),
+                ..default()
+            },
+            Joel::new(spawn_side, position, target_position), // Keep marker component for rendering system
+            Velocity(initial_velocity),
+            MaxSpeed(config.joel_speed),
+            TurnRate(config.joel_turn_rate),
+            NewJoelState::Entering, // Start with new entering state
+            MoveTowardsPoint::new(target_position, 5.0),
+        ))
+        .id();
 
     // Add remaining components
     commands.entity(entity).insert((

@@ -18,7 +18,6 @@ pub(super) fn plugin(app: &mut App) {
         .register_type::<MoveTowardsPoint>()
         .register_type::<ProjectileLauncher>()
         .register_type::<Timer>()
-        .register_type::<KeziaState>()
         .register_type::<NewJoelState>()
         .register_type::<Card>();
 }
@@ -186,13 +185,6 @@ impl Timer {
 }
 
 // ==================== Enemy State Components ====================
-
-#[derive(Component, Reflect, Default)]
-pub enum KeziaState {
-    #[default]
-    Tracking,
-    MovingStraight,
-}
 
 #[derive(Component, Reflect, Default)]
 pub enum NewJoelState {
