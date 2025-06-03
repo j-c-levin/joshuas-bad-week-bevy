@@ -58,7 +58,7 @@ fn handle_game_over_events(
 
         // Cleanup all game entities
         for entity in &entities {
-            commands.entity(entity).despawn();
+            commands.entity(entity).try_despawn();
         }
 
         info!("Game Over! Player died.");

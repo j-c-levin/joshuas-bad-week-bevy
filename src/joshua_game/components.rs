@@ -241,6 +241,7 @@ pub enum KeziaState {
 
 #[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
 pub enum NewJoelState {
+    Entering,
     #[default]
     Approaching,
     Tracking,
@@ -291,7 +292,7 @@ impl Joel {
     }
 }
 
-#[derive(Reflect, Clone, Copy, PartialEq, Default)]
+#[derive(Reflect, Clone, Copy, PartialEq, Default, Debug)]
 pub enum JoelState {
     #[default]
     Approaching,
@@ -299,7 +300,7 @@ pub enum JoelState {
     Retreating,
 }
 
-#[derive(Reflect, Clone, Copy, PartialEq, Default)]
+#[derive(Reflect, Clone, Copy, PartialEq, Default, Debug)]
 pub enum SpawnSide {
     #[default]
     Top,

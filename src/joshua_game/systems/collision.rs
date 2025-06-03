@@ -62,7 +62,7 @@ fn player_enemy_collision(
             });
 
             // Destroy the Kezia that hit the player
-            commands.entity(kezia_entity).despawn();
+            commands.entity(kezia_entity).try_despawn();
         }
     }
 
@@ -112,7 +112,7 @@ fn player_card_collision(
             });
 
             // Destroy the card that hit the player
-            commands.entity(card_entity).despawn();
+            commands.entity(card_entity).try_despawn();
         }
     }
 }

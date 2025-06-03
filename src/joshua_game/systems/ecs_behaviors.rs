@@ -7,11 +7,12 @@ use crate::{
     joshua_game::{
         components::{
             Joel, KeziaState, LifetimeTimer, MaxSpeed, MoveInDirection, MoveTowardsPoint,
-            NewJoelState, PlayerTarget, ProjectileLauncher, RotateTowardsTarget, Timer,
+            NewJoelState, PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
             TrackTarget, TurnRate, Velocity,
         },
         events::CardSpawnEvent,
         resources::GameState,
+        config::GameConfig,
     },
 };
 
@@ -216,8 +217,8 @@ fn rotate_towards_target_system(
                     }
                 }
             }
-            NewJoelState::Approaching | NewJoelState::Retreating => {
-                // No rotation during approaching or retreating
+            NewJoelState::Entering | NewJoelState::Approaching | NewJoelState::Retreating => {
+                // No rotation during entering, approaching, or retreating
             }
         }
     }
@@ -225,19 +226,16 @@ fn rotate_towards_target_system(
 
 /// Move entities towards a specific point
 fn move_towards_point_system(
-    mut query: Query<(&mut MoveTowardsPoint, &Transform, &mut Velocity, &MaxSpeed)>,
+    mut query: Query<(&mut MoveTowardsPoint, &Transform, &mut Velocity, &MaxSpeed), Without<Joel>>,
 ) {
     for (move_towards, transform, mut velocity, max_speed) in &mut query {
-        let direction =
-            (move_towards.target_position - transform.translation.xy()).normalize_or_zero();
-        let distance = transform
-            .translation
-            .xy()
-            .distance(move_towards.target_position);
+        let current_pos = transform.translation.xy();
+        let distance = current_pos.distance(move_towards.target_position);
 
         if distance <= move_towards.stop_distance {
             velocity.0 = Vec2::ZERO;
         } else {
+            let direction = (move_towards.target_position - current_pos).normalize_or_zero();
             velocity.0 = direction * max_speed.0;
         }
     }
@@ -297,7 +295,7 @@ fn lifetime_timer_system(
         lifetime.remaining -= delta;
 
         if lifetime.remaining <= 0.0 {
-            commands.entity(entity).despawn();
+            commands.entity(entity).try_despawn();
         }
     }
 }
@@ -318,14 +316,15 @@ fn kezia_state_system(
     for (mut state, mut track_target, timer, mut velocity, mut transform, max_speed) in &mut query {
         match *state {
             KeziaState::Tracking => {
+                // During tracking, ensure velocity matches rotation direction (forward movement)
+                let rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
+                velocity.0 = Vec2::new(rotation.cos(), rotation.sin()) * max_speed.0;
+
                 if timer.is_finished() {
                     *state = KeziaState::MovingStraight;
                     track_target.target_entity = None; // Stop tracking
 
-                    // Set velocity to continue in current direction
-                    let rotation = transform.rotation.to_euler(EulerRot::ZYX).0;
-                    velocity.0 = Vec2::new(rotation.cos(), rotation.sin()) * max_speed.0;
-
+                    // Set velocity to continue in current direction (which is already correct from above)
                     // Update rotation to match velocity direction for consistent movement
                     let velocity_angle = velocity.0.y.atan2(velocity.0.x);
                     transform.rotation = Quat::from_rotation_z(velocity_angle);
@@ -352,34 +351,70 @@ fn joel_state_system(
         &mut Timer,
         &Transform,
         &Joel, // Added Joel component to access spawn position
+        &mut Velocity,
+        &MaxSpeed,
     )>,
+    config: Res<GameConfig>,
 ) {
-    for (mut state, mut move_towards, _launcher, mut timer, transform, joel) in &mut query {
+    let screen_half_width = config.screen_width / 2.0;
+    let screen_half_height = config.screen_height / 2.0;
+
+    for (mut state, mut move_towards, _launcher, mut timer, transform, joel, mut velocity, max_speed) in &mut query {
+        let current_pos = transform.translation.xy();
+        
         match *state {
+            NewJoelState::Entering => {
+                // Check if Joel has entered the screen area
+                let has_entered_screen = match joel.spawn_side {
+                    SpawnSide::Top => current_pos.y <= screen_half_height,
+                    SpawnSide::Right => current_pos.x <= screen_half_width,
+                    SpawnSide::Bottom => current_pos.y >= -screen_half_height,
+                    SpawnSide::Left => current_pos.x >= -screen_half_width,
+                };
+
+                if has_entered_screen {
+                    info!("Joel entered screen, transitioning from Entering to Approaching");
+                    *state = NewJoelState::Approaching;
+                    
+                    // Set velocity to move toward target position
+                    let direction = (joel.target_position - current_pos).normalize_or_zero();
+                    velocity.0 = direction * max_speed.0;
+                }
+                // During Entering state, continue moving perpendicular to spawn side
+                // Velocity was set during spawn and should continue
+            }
             NewJoelState::Approaching => {
-                let distance = transform
-                    .translation
-                    .xy()
-                    .distance(move_towards.target_position);
+                let distance = current_pos.distance(move_towards.target_position);
                 if distance <= move_towards.stop_distance {
                     info!("Joel transitioning from Approaching to Tracking");
                     *state = NewJoelState::Tracking;
                     timer.reset();
+                    velocity.0 = Vec2::ZERO; // Stop moving
+                } else {
+                    // Continue moving toward target
+                    let direction = (joel.target_position - current_pos).normalize_or_zero();
+                    velocity.0 = direction * max_speed.0;
                 }
             }
             NewJoelState::Tracking => {
+                // Stay in place and track player
+                velocity.0 = Vec2::ZERO;
+
                 if timer.is_finished() {
                     info!("Joel transitioning from Tracking to Retreating");
                     *state = NewJoelState::Retreating;
 
                     // Set retreat target position - move back toward spawn position and beyond
-                    let current_pos = transform.translation.xy();
                     let spawn_pos = joel.spawn_position;
                     let retreat_direction = (spawn_pos - current_pos).normalize_or_zero();
 
                     // Set target position far off screen in retreat direction
                     move_towards.target_position = spawn_pos + retreat_direction * 500.0;
                     move_towards.stop_distance = 0.0; // Don't stop until off screen
+                    
+                    // Set retreat velocity
+                    velocity.0 = retreat_direction * max_speed.0;
+                    
                     info!(
                         "Joel set to retreat to position: {:?}",
                         move_towards.target_position
@@ -387,7 +422,9 @@ fn joel_state_system(
                 }
             }
             NewJoelState::Retreating => {
-                // Continue retreating - handled by move_towards_point_system
+                // Continue retreating - velocity should maintain retreat direction
+                let retreat_direction = (joel.spawn_position - current_pos).normalize_or_zero();
+                velocity.0 = retreat_direction * max_speed.0;
             }
         }
     }
@@ -435,21 +472,18 @@ fn track_velocity_system(
             &Transform,
             &mut Velocity,
             &MaxSpeed,
-            &KeziaState,
+            &TurnRate,
         ),
-        Without<PlayerTarget>,
+        (Without<PlayerTarget>, Without<KeziaState>), // Exclude Kezia entities
     >,
 ) {
-    for (track_target, transform, mut velocity, max_speed, kezia_state) in &mut tracker_query {
-        // Only track velocity if in tracking state
-        if matches!(*kezia_state, KeziaState::Tracking) {
-            if let Some(target_entity) = track_target.target_entity {
-                if let Ok(target_transform) = target_query.get(target_entity) {
-                    let direction = (target_transform.translation.xy()
-                        - transform.translation.xy())
-                    .normalize_or_zero();
-                    velocity.0 = direction * max_speed.0;
-                }
+    for (track_target, transform, mut velocity, max_speed, _turn_rate) in &mut tracker_query {
+        if let Some(target_entity) = track_target.target_entity {
+            if let Ok(target_transform) = target_query.get(target_entity) {
+                let direction = (target_transform.translation.xy()
+                    - transform.translation.xy())
+                .normalize_or_zero();
+                velocity.0 = direction * max_speed.0;
             }
         }
     }

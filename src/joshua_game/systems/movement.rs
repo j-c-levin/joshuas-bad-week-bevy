@@ -89,7 +89,7 @@ fn cleanup_offscreen_entities(
             || pos.y < -screen_half_height - margin - max_extent
             || pos.y > screen_half_height + margin + max_extent
         {
-            commands.entity(entity).despawn();
+            commands.entity(entity).try_despawn();
         }
     }
 }

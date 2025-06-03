@@ -113,7 +113,7 @@ fn handle_enemy_spawn_events(
     for event in events.read() {
         match event.enemy_type {
             EnemyType::Kezia => {
-                spawn_kezia_ecs(&mut commands, event.position, &config);
+                spawn_kezia_ecs(&mut commands, event.position, event.spawn_side, &config);
             }
             EnemyType::Joel => {
                 spawn_joel_ecs(&mut commands, event.position, event.spawn_side, &config);
@@ -145,7 +145,7 @@ fn update_card_lifetime(
         card.lifetime -= delta;
 
         if card.lifetime <= 0.0 {
-            commands.entity(entity).despawn();
+            commands.entity(entity).try_despawn();
         }
     }
 }
@@ -202,12 +202,44 @@ fn calculate_joel_target_position(spawn_side: SpawnSide, config: &GameConfig) ->
 }
 
 /// Spawn a Kezia enemy using new ECS components
-fn spawn_kezia_ecs(commands: &mut Commands, position: Vec2, config: &GameConfig) {
+fn spawn_kezia_ecs(commands: &mut Commands, position: Vec2, spawn_side: SpawnSide, config: &GameConfig) {
+    // Calculate initial rotation and velocity based on spawn side to enter screen properly
+    let (initial_rotation, initial_velocity) = match spawn_side {
+        SpawnSide::Top => {
+            // Coming from top, face downward
+            let rotation = -std::f32::consts::PI / 2.0; // -90 degrees (pointing down)
+            let velocity = Vec2::new(0.0, -config.kezia_speed);
+            (rotation, velocity)
+        }
+        SpawnSide::Right => {
+            // Coming from right, face leftward
+            let rotation = std::f32::consts::PI; // 180 degrees (pointing left)
+            let velocity = Vec2::new(-config.kezia_speed, 0.0);
+            (rotation, velocity)
+        }
+        SpawnSide::Bottom => {
+            // Coming from bottom, face upward
+            let rotation = std::f32::consts::PI / 2.0; // 90 degrees (pointing up)
+            let velocity = Vec2::new(0.0, config.kezia_speed);
+            (rotation, velocity)
+        }
+        SpawnSide::Left => {
+            // Coming from left, face rightward
+            let rotation = 0.0; // 0 degrees (pointing right)
+            let velocity = Vec2::new(config.kezia_speed, 0.0);
+            (rotation, velocity)
+        }
+    };
+
     commands.spawn((
         Name::new("Kezia"),
-        Transform::from_translation(position.extend(0.0)),
+        Transform {
+            translation: position.extend(0.0),
+            rotation: Quat::from_rotation_z(initial_rotation),
+            ..default()
+        },
         Kezia::default(), // Keep marker component for rendering system
-        Velocity::default(),
+        Velocity(initial_velocity),
         MaxSpeed(config.kezia_speed),
         TurnRate(config.kezia_turn_rate),
         TrackTarget::default(),
@@ -220,7 +252,7 @@ fn spawn_kezia_ecs(commands: &mut Commands, position: Vec2, config: &GameConfig)
         GameEntity,
     ));
 
-    info!("Kezia ECS spawned at {:?}", position);
+    info!("Kezia ECS spawned at {:?} from side {:?}", position, spawn_side);
 }
 
 /// Spawn a Joel enemy using new ECS components
@@ -232,14 +264,46 @@ fn spawn_joel_ecs(
 ) {
     let target_position = calculate_joel_target_position(spawn_side, config);
 
+    // Calculate initial rotation and velocity to move perpendicular to spawn side
+    let (initial_rotation, initial_velocity) = match spawn_side {
+        SpawnSide::Top => {
+            // Coming from top, face downward initially
+            let rotation = -std::f32::consts::PI / 2.0; // -90 degrees (pointing down)
+            let velocity = Vec2::new(0.0, -config.joel_speed);
+            (rotation, velocity)
+        }
+        SpawnSide::Right => {
+            // Coming from right, face leftward initially
+            let rotation = std::f32::consts::PI; // 180 degrees (pointing left)
+            let velocity = Vec2::new(-config.joel_speed, 0.0);
+            (rotation, velocity)
+        }
+        SpawnSide::Bottom => {
+            // Coming from bottom, face upward initially
+            let rotation = std::f32::consts::PI / 2.0; // 90 degrees (pointing up)
+            let velocity = Vec2::new(0.0, config.joel_speed);
+            (rotation, velocity)
+        }
+        SpawnSide::Left => {
+            // Coming from left, face rightward initially
+            let rotation = 0.0; // 0 degrees (pointing right)
+            let velocity = Vec2::new(config.joel_speed, 0.0);
+            (rotation, velocity)
+        }
+    };
+
     commands.spawn((
         Name::new("Joel"),
-        Transform::from_translation(position.extend(0.0)),
+        Transform {
+            translation: position.extend(0.0),
+            rotation: Quat::from_rotation_z(initial_rotation),
+            ..default()
+        },
         Joel::new(spawn_side, position, target_position), // Keep marker component for rendering system
-        Velocity::default(),
+        Velocity(initial_velocity),
         MaxSpeed(config.joel_speed),
         TurnRate(config.joel_turn_rate),
-        NewJoelState::default(),
+        NewJoelState::Entering, // Start with new entering state
         MoveTowardsPoint::new(target_position, 5.0),
         RotateTowardsTarget::new(std::f32::consts::PI / 2.0), // Joel faces perpendicular to player
         ProjectileLauncher::new(
@@ -253,7 +317,7 @@ fn spawn_joel_ecs(
         GameEntity,
     ));
 
-    info!("Joel ECS spawned at {:?}", position);
+    info!("Joel ECS spawned at {:?} from side {:?}", position, spawn_side);
 }
 
 /// Spawn a card projectile using new ECS components
