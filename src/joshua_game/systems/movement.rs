@@ -5,40 +5,19 @@ use bevy::prelude::*;
 use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
-        components::{CollisionBox, GameEntity, Movement, OffScreenCleanup, Player},
+        components::{CollisionBox, GameEntity, OffScreenCleanup, Player},
         config::GameConfig,
-        resources::GameState,
     },
 };
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            apply_movement,
-            constrain_player_to_screen,
-            cleanup_offscreen_entities,
-        )
+        (constrain_player_to_screen, cleanup_offscreen_entities)
             .in_set(AppSystems::Update)
             .in_set(PausableSystems)
             .run_if(in_state(crate::screens::Screen::Gameplay)),
     );
-}
-
-/// Apply velocity to entity positions
-fn apply_movement(
-    time: Res<Time>,
-    mut query: Query<(&mut Transform, &Movement)>,
-    game_state: Res<GameState>,
-) {
-    if !game_state.is_game_active() {
-        return;
-    }
-
-    for (mut transform, movement) in &mut query {
-        transform.translation += movement.velocity.extend(0.0) * time.delta_secs();
-        transform.rotation = Quat::from_rotation_z(movement.rotation);
-    }
 }
 
 /// Keep the player within screen boundaries

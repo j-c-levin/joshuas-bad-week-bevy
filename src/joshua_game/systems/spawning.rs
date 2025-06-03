@@ -9,7 +9,7 @@ use crate::{
         components::{
             Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, KeziaState, LifetimeTimer,
             MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState, OffScreenCleanup, Player,
-            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer, TrackTarget,
+            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, TargetPlayer, Timer,
             TurnRate, Velocity,
         },
         config::GameConfig,
@@ -109,14 +109,19 @@ fn handle_enemy_spawn_events(
     mut commands: Commands,
     mut events: EventReader<EnemySpawnEvent>,
     config: Res<GameConfig>,
+    player_query: Query<Entity, With<PlayerTarget>>,
 ) {
+    let Ok(player_entity) = player_query.single() else {
+        return; // No player entity available
+    };
+
     for event in events.read() {
         match event.enemy_type {
             EnemyType::Kezia => {
-                spawn_kezia_ecs(&mut commands, event.position, event.spawn_side, &config);
+                spawn_kezia_ecs(&mut commands, event.position, event.spawn_side, &config, player_entity);
             }
             EnemyType::Joel => {
-                spawn_joel_ecs(&mut commands, event.position, event.spawn_side, &config);
+                spawn_joel_ecs(&mut commands, event.position, event.spawn_side, &config, player_entity);
             }
         }
     }
@@ -207,6 +212,7 @@ fn spawn_kezia_ecs(
     position: Vec2,
     spawn_side: SpawnSide,
     config: &GameConfig,
+    player_entity: Entity,
 ) {
     // Calculate initial rotation and velocity based on spawn side to enter screen properly
     let (initial_rotation, initial_velocity) = match spawn_side {
@@ -236,7 +242,7 @@ fn spawn_kezia_ecs(
         }
     };
 
-    commands.spawn((
+    let entity = commands.spawn((
         Name::new("Kezia"),
         Transform {
             translation: position.extend(0.0),
@@ -247,10 +253,14 @@ fn spawn_kezia_ecs(
         Velocity(initial_velocity),
         MaxSpeed(config.kezia_speed),
         TurnRate(config.kezia_turn_rate),
-        TrackTarget::default(),
-        RotateTowardsTarget::default(),
+        TargetPlayer::new(player_entity),
+        RotateTowardsTarget::new(0.0),
         KeziaState::default(),
         Timer::new(config.kezia_tracking_duration, false),
+    )).id();
+
+    // Add remaining components
+    commands.entity(entity).insert((
         MoveInDirection, // Continue moving straight after tracking
         CollisionBox::new(Vec2::new(config.kezia_width, config.kezia_height)),
         Damage,
@@ -270,6 +280,7 @@ fn spawn_joel_ecs(
     position: Vec2,
     spawn_side: SpawnSide,
     config: &GameConfig,
+    player_entity: Entity,
 ) {
     let target_position = calculate_joel_target_position(spawn_side, config);
 
@@ -301,7 +312,7 @@ fn spawn_joel_ecs(
         }
     };
 
-    commands.spawn((
+    let entity = commands.spawn((
         Name::new("Joel"),
         Transform {
             translation: position.extend(0.0),
@@ -314,11 +325,13 @@ fn spawn_joel_ecs(
         TurnRate(config.joel_turn_rate),
         NewJoelState::Entering, // Start with new entering state
         MoveTowardsPoint::new(target_position, 5.0),
+        TargetPlayer::new(player_entity),
         RotateTowardsTarget::new(std::f32::consts::PI / 2.0), // Joel faces perpendicular to player
-        ProjectileLauncher::new(
-            config.joel_card_fire_rate,
-            config.card_speed,
-        ),
+    )).id();
+
+    // Add remaining components
+    commands.entity(entity).insert((
+        ProjectileLauncher::new(config.joel_card_fire_rate, config.card_speed),
         Timer::new(config.joel_tracking_duration, false),
         CollisionBox::new(Vec2::new(config.joel_width, config.joel_height)),
         Damage,

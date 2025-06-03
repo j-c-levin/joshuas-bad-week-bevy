@@ -5,18 +5,16 @@ use bevy::prelude::*;
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>()
         .register_type::<Health>()
-        .register_type::<Movement>()
         .register_type::<CollisionBox>()
         .register_type::<Kezia>()
         .register_type::<Joel>()
         .register_type::<Damage>()
-        .register_type::<JoelState>()
         .register_type::<SpawnSide>()
         // New ECS-friendly components
         .register_type::<Velocity>()
         .register_type::<MaxSpeed>()
         .register_type::<TurnRate>()
-        .register_type::<TrackTarget>()
+        .register_type::<TargetPlayer>()
         .register_type::<RotateTowardsTarget>()
         .register_type::<MoveTowardsPoint>()
         .register_type::<ProjectileLauncher>()
@@ -75,16 +73,6 @@ impl Health {
 }
 
 #[derive(Component, Reflect)]
-pub struct Movement {
-    pub velocity: Vec2,
-    pub speed: f32,
-    pub rotation: f32,
-    pub turn_rate: f32,
-}
-
-impl Movement {}
-
-#[derive(Component, Reflect)]
 pub struct CollisionBox {
     pub size: Vec2,
 }
@@ -119,29 +107,25 @@ pub struct TurnRate(pub f32);
 
 // ==================== New ECS Behavior Components ====================
 
-#[derive(Component, Reflect, Default)]
-pub struct TrackTarget {
-    pub target_entity: Option<Entity>,
+#[derive(Component, Reflect)]
+pub struct TargetPlayer {
+    pub target_entity: Entity,
+}
+
+impl TargetPlayer {
+    pub fn new(target_entity: Entity) -> Self {
+        Self { target_entity }
+    }
 }
 
 #[derive(Component, Reflect)]
 pub struct RotateTowardsTarget {
-    pub target_entity: Option<Entity>,
     pub offset_angle: f32,
 }
 
 impl RotateTowardsTarget {
     pub fn new(offset_angle: f32) -> Self {
-        Self {
-            target_entity: None,
-            offset_angle,
-        }
-    }
-}
-
-impl Default for RotateTowardsTarget {
-    fn default() -> Self {
-        Self::new(0.0)
+        Self { offset_angle }
     }
 }
 
@@ -165,7 +149,6 @@ pub struct ProjectileLauncher {
     pub fire_rate: f32,
     pub timer: f32,
     pub projectile_speed: f32,
-    pub target_entity: Option<Entity>,
 }
 
 impl ProjectileLauncher {
@@ -174,7 +157,6 @@ impl ProjectileLauncher {
             fire_rate,
             timer: 0.0,
             projectile_speed,
-            target_entity: None,
         }
     }
 }
@@ -229,16 +211,16 @@ impl LifetimeTimer {
     }
 }
 
-// ==================== New ECS State Components ====================
+// ==================== Enemy State Components ====================
 
-#[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
+#[derive(Component, Reflect, Default)]
 pub enum KeziaState {
     #[default]
     Tracking,
     MovingStraight,
 }
 
-#[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
+#[derive(Component, Reflect, Default)]
 pub enum NewJoelState {
     Entering,
     #[default]
@@ -247,7 +229,7 @@ pub enum NewJoelState {
     Retreating,
 }
 
-// ==================== Legacy Enemy Components ====================
+// ==================== Enemy Components ====================
 
 #[derive(Component, Reflect)]
 pub struct Kezia {
@@ -266,40 +248,22 @@ impl Default for Kezia {
 
 #[derive(Component, Reflect)]
 pub struct Joel {
-    pub state: JoelState,
-    pub state_timer: f32,
-    pub card_fire_timer: f32,
     pub spawn_side: SpawnSide,
     pub target_position: Vec2,
     pub spawn_position: Vec2,
-    pub is_charging: bool,
-    pub charge_timer: f32,
 }
 
 impl Joel {
     pub fn new(spawn_side: SpawnSide, spawn_position: Vec2, target_position: Vec2) -> Self {
         Self {
-            state: JoelState::Approaching,
-            state_timer: 0.0,
-            card_fire_timer: 0.0,
             spawn_side,
             target_position,
             spawn_position,
-            is_charging: false,
-            charge_timer: 0.0,
         }
     }
 }
 
-#[derive(Reflect, Clone, Copy, PartialEq, Default, Debug)]
-pub enum JoelState {
-    #[default]
-    Approaching,
-    Tracking,
-    Retreating,
-}
-
-#[derive(Reflect, Clone, Copy, PartialEq, Default, Debug)]
+#[derive(Component, Reflect, Default, Debug, Clone, Copy)]
 pub enum SpawnSide {
     #[default]
     Top,
@@ -308,7 +272,7 @@ pub enum SpawnSide {
     Left,
 }
 
-// ==================== Projectile Components ====================
+// ==================== Other Components ====================
 
 #[derive(Component, Reflect)]
 pub struct Damage;
@@ -316,10 +280,10 @@ pub struct Damage;
 #[derive(Component, Reflect)]
 pub struct Card;
 
-// ==================== Utility Components ====================
+// ==================== Cleanup Components ====================
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct OffScreenCleanup;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct GameEntity; // Marker for entities that should be cleaned up when the game ends

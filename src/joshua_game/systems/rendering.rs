@@ -97,7 +97,6 @@ fn update_sprite_colors(
         (&mut Sprite, &crate::joshua_game::components::Health),
         (With<Player>, With<EntitySprite>),
     >,
-    mut joel_query: Query<(&mut Sprite, &Joel), (With<Joel>, With<EntitySprite>, Without<Player>)>,
 ) {
     // Update player color based on health
     for (mut sprite, health) in &mut player_query {
@@ -106,15 +105,6 @@ fn update_sprite_colors(
             sprite.color = config.player_low_health_color;
         } else {
             sprite.color = config.player_color;
-        }
-    }
-
-    // Update Joel color when charging
-    for (mut sprite, joel) in &mut joel_query {
-        if joel.is_charging {
-            sprite.color = config.joel_charging_color;
-        } else {
-            sprite.color = config.joel_color;
         }
     }
 }

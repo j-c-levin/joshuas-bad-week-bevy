@@ -4,7 +4,6 @@ use bevy::prelude::*;
 
 mod collision;
 mod ecs_behaviors;
-mod enemy_ai;
 mod game_state;
 mod input;
 mod movement;
@@ -16,7 +15,6 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         input::plugin,
         movement::plugin,
-        enemy_ai::plugin,
         ecs_behaviors::plugin,
         collision::plugin,
         spawning::plugin,

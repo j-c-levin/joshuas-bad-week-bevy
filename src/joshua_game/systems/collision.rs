@@ -14,10 +14,7 @@ use crate::{
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            player_damage_collision,
-            handle_damage_events,
-        )
+        (player_damage_collision, handle_damage_events)
             .in_set(AppSystems::Update)
             .in_set(PausableSystems)
             .run_if(in_state(crate::screens::Screen::Gameplay)),

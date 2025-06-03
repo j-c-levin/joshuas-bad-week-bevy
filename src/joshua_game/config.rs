@@ -27,7 +27,6 @@ pub struct GameConfig {
 
     // Effect Colors
     pub player_low_health_color: Color,
-    pub joel_charging_color: Color,
 
     // Input Settings
     pub diagonal_movement_normalizer: f32,
@@ -84,7 +83,6 @@ impl Default for GameConfig {
 
             // Effect Colors
             player_low_health_color: Color::srgb(1.0, 0.0, 0.0), // Red
-            joel_charging_color: Color::WHITE,
 
             // Input Settings
             diagonal_movement_normalizer: 0.707, // 1/sqrt(2)
