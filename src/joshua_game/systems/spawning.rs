@@ -8,8 +8,8 @@ use crate::{
     joshua_game::{
         components::{
             Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, MaxSpeed, MoveInDirection,
-            MoveTowardsPoint, OffScreenCleanup, Player, PlayerTarget,
-            RotateTowardsTarget, SpawnSide, Timer, TurnRate, Velocity,
+            MoveTowardsPoint, OffScreenCleanup, Player, PlayerTarget, RotateTowardsTarget,
+            SpawnSide, Timer, TurnRate, Velocity,
         },
         config::GameConfig,
         events::{CardSpawnEvent, EnemySpawnEvent, EnemyType},
@@ -82,7 +82,7 @@ fn spawn_enemies_system(
 
         let mut rng = thread_rng();
         let (spawn_pos, spawn_side) = generate_spawn_position(&config);
-        
+
         // Randomly choose between Kezia and Joel with equal probability
         let enemy_type = if rng.gen_bool(0.5) {
             EnemyType::Kezia

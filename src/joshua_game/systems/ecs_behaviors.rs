@@ -6,9 +6,8 @@ use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            Joel, Kezia, MaxSpeed, MoveInDirection, MoveTowardsPoint,
-            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, Timer, TurnRate,
-            Velocity,
+            Joel, Kezia, MaxSpeed, MoveInDirection, MoveTowardsPoint, PlayerTarget,
+            ProjectileLauncher, RotateTowardsTarget, Timer, TurnRate, Velocity,
         },
         config::GameConfig,
         events::CardSpawnEvent,
@@ -17,7 +16,7 @@ use crate::{
 
 /// System sets for organizing ECS behavior execution phases
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-enum BehaviorPhase {
+enum BehaviorPhaseSystems {
     /// Calculate and set velocities
     UpdateVelocity,
     /// Apply physics (velocity to position)
@@ -31,9 +30,9 @@ pub(super) fn plugin(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            BehaviorPhase::UpdateVelocity,
-            BehaviorPhase::ApplyPhysics,
-            BehaviorPhase::Effects,
+            BehaviorPhaseSystems::UpdateVelocity,
+            BehaviorPhaseSystems::ApplyPhysics,
+            BehaviorPhaseSystems::Effects,
         )
             .chain()
             .in_set(AppSystems::Update)
@@ -54,13 +53,13 @@ pub(super) fn plugin(app: &mut App) {
             timer_tick_system,
         )
             .chain()
-            .in_set(BehaviorPhase::UpdateVelocity),
+            .in_set(BehaviorPhaseSystems::UpdateVelocity),
     );
 
     app.add_systems(
         Update,
         // Phase 2: Apply physics
-        velocity_system.in_set(BehaviorPhase::ApplyPhysics),
+        velocity_system.in_set(BehaviorPhaseSystems::ApplyPhysics),
     );
 
     app.add_systems(
@@ -69,7 +68,7 @@ pub(super) fn plugin(app: &mut App) {
             // Phase 3: Other effects that don't affect movement
             projectile_launcher_system,
         )
-            .in_set(BehaviorPhase::Effects),
+            .in_set(BehaviorPhaseSystems::Effects),
     );
 }
 
@@ -144,7 +143,13 @@ fn rotate_towards_target_system(
 /// Move entities towards a specific point and remove component when reached
 fn move_towards_point_system(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut MoveTowardsPoint, &Transform, &mut Velocity, &MaxSpeed)>,
+    mut query: Query<(
+        Entity,
+        &mut MoveTowardsPoint,
+        &Transform,
+        &mut Velocity,
+        &MaxSpeed,
+    )>,
 ) {
     for (entity, move_towards, transform, mut velocity, max_speed) in &mut query {
         let current_pos = transform.translation.xy();
@@ -172,19 +177,20 @@ fn joel_start_tracking_system(
         // Check if this entity is a Joel and in the appropriate state
         if let Ok(mut timer) = joel_query.get_mut(entity) {
             info!("Joel finished moving to target, transitioning to Tracking");
-            
+
             // Reset timer for tracking duration
             timer.reset();
-            
+
             // Add RotateTowardsTarget component when Joel finishes approaching
             commands
                 .entity(entity)
                 .insert(RotateTowardsTarget::new(std::f32::consts::PI / 2.0));
-            
+
             // Add ProjectileLauncher component to start firing cards
-            commands
-                .entity(entity)
-                .insert(ProjectileLauncher::new(config.joel_card_fire_rate, config.card_speed));
+            commands.entity(entity).insert(ProjectileLauncher::new(
+                config.joel_card_fire_rate,
+                config.card_speed,
+            ));
         }
     }
 }
@@ -245,25 +251,20 @@ fn kezia_system(mut commands: Commands, mut query: Query<(Entity, &mut Timer), W
 /// Handle Joel entities that just finished tracking and need to retreat
 fn joel_finish_tracking_system(
     mut commands: Commands,
-    mut query: Query<(
-        Entity,
-        &mut Timer,
-        &Transform,
-        &Joel,
-        &mut Velocity,
-        &MaxSpeed,
-    ), (With<RotateTowardsTarget>, Without<MoveTowardsPoint>)>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Timer,
+            &Transform,
+            &Joel,
+            &mut Velocity,
+            &MaxSpeed,
+        ),
+        (With<RotateTowardsTarget>, Without<MoveTowardsPoint>),
+    >,
     _config: Res<GameConfig>,
 ) {
-    for (
-        entity,
-        timer,
-        transform,
-        joel,
-        mut velocity,
-        _max_speed,
-    ) in &mut query
-    {
+    for (entity, timer, transform, joel, mut velocity, _max_speed) in &mut query {
         let current_pos = transform.translation.xy();
 
         // Stay in place and track player (since we have RotateTowardsTarget component)
