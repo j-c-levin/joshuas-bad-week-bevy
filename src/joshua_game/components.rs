@@ -9,7 +9,7 @@ pub(super) fn plugin(app: &mut App) {
         .register_type::<CollisionBox>()
         .register_type::<Kezia>()
         .register_type::<Joel>()
-        .register_type::<Card>()
+        .register_type::<Damage>()
         .register_type::<JoelState>()
         .register_type::<SpawnSide>()
         // New ECS-friendly components
@@ -23,7 +23,8 @@ pub(super) fn plugin(app: &mut App) {
         .register_type::<Timer>()
         .register_type::<LifetimeTimer>()
         .register_type::<KeziaState>()
-        .register_type::<NewJoelState>();
+        .register_type::<NewJoelState>()
+        .register_type::<Card>();
 }
 
 // ==================== Player Components ====================
@@ -164,17 +165,15 @@ pub struct ProjectileLauncher {
     pub fire_rate: f32,
     pub timer: f32,
     pub projectile_speed: f32,
-    pub damage: i32,
     pub target_entity: Option<Entity>,
 }
 
 impl ProjectileLauncher {
-    pub fn new(fire_rate: f32, projectile_speed: f32, damage: i32) -> Self {
+    pub fn new(fire_rate: f32, projectile_speed: f32) -> Self {
         Self {
             fire_rate,
             timer: 0.0,
             projectile_speed,
-            damage,
             target_entity: None,
         }
     }
@@ -312,16 +311,10 @@ pub enum SpawnSide {
 // ==================== Projectile Components ====================
 
 #[derive(Component, Reflect)]
-pub struct Card {
-    pub damage: i32,
-    pub lifetime: f32,
-}
+pub struct Damage;
 
-impl Card {
-    pub fn new(damage: i32, lifetime: f32) -> Self {
-        Self { damage, lifetime }
-    }
-}
+#[derive(Component, Reflect)]
+pub struct Card;
 
 // ==================== Utility Components ====================
 

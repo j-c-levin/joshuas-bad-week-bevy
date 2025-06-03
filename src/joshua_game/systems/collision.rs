@@ -5,8 +5,7 @@ use bevy::prelude::*;
 use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
-        components::{Card, CollisionBox, Health, Joel, Kezia, Player},
-        config::GameConfig,
+        components::{CollisionBox, Damage, Health, Joel, Player},
         events::{DamageEvent, GameOverEvent},
         resources::GameState,
     },
@@ -16,8 +15,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            player_enemy_collision,
-            player_card_collision,
+            player_damage_collision,
             handle_damage_events,
         )
             .in_set(AppSystems::Update)
@@ -26,66 +24,10 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-/// Check collisions between player and enemies
-fn player_enemy_collision(
+/// Check collisions between player and any entity that can deal damage
+fn player_damage_collision(
     player_query: Query<(Entity, &Transform, &CollisionBox), With<Player>>,
-    kezia_query: Query<(Entity, &Transform, &CollisionBox), (With<Kezia>, Without<Player>)>,
-    joel_query: Query<
-        (Entity, &Transform, &CollisionBox),
-        (With<Joel>, Without<Player>, Without<Kezia>),
-    >,
-    mut damage_events: EventWriter<DamageEvent>,
-    mut commands: Commands,
-    config: Res<GameConfig>,
-    game_state: Res<GameState>,
-) {
-    if !game_state.is_game_active() {
-        return;
-    }
-
-    let Ok((player_entity, player_transform, player_collision)) = player_query.single() else {
-        return;
-    };
-
-    let player_pos = player_transform.translation.xy();
-    let (player_min, player_max) = player_collision.get_rect(player_pos);
-
-    // Check Kezia collisions
-    for (kezia_entity, kezia_transform, kezia_collision) in &kezia_query {
-        let kezia_pos = kezia_transform.translation.xy();
-        let (kezia_min, kezia_max) = kezia_collision.get_rect(kezia_pos);
-
-        if rects_overlap(player_min, player_max, kezia_min, kezia_max) {
-            damage_events.write(DamageEvent {
-                target: player_entity,
-                amount: config.kezia_damage,
-            });
-
-            // Destroy the Kezia that hit the player
-            commands.entity(kezia_entity).try_despawn();
-        }
-    }
-
-    // Check Joel collisions
-    for (_joel_entity, joel_transform, joel_collision) in &joel_query {
-        let joel_pos = joel_transform.translation.xy();
-        let (joel_min, joel_max) = joel_collision.get_rect(joel_pos);
-
-        if rects_overlap(player_min, player_max, joel_min, joel_max) {
-            damage_events.write(DamageEvent {
-                target: player_entity,
-                amount: config.joel_damage,
-            });
-
-            // Joel doesn't get destroyed on collision
-        }
-    }
-}
-
-/// Check collisions between player and cards
-fn player_card_collision(
-    player_query: Query<(Entity, &Transform, &CollisionBox), With<Player>>,
-    card_query: Query<(Entity, &Transform, &CollisionBox, &Card), Without<Player>>,
+    damage_query: Query<(Entity, &Transform, &CollisionBox, Option<&Joel>), (With<Damage>, Without<Player>)>,
     mut damage_events: EventWriter<DamageEvent>,
     mut commands: Commands,
     game_state: Res<GameState>,
@@ -101,18 +43,22 @@ fn player_card_collision(
     let player_pos = player_transform.translation.xy();
     let (player_min, player_max) = player_collision.get_rect(player_pos);
 
-    for (card_entity, card_transform, card_collision, card) in &card_query {
-        let card_pos = card_transform.translation.xy();
-        let (card_min, card_max) = card_collision.get_rect(card_pos);
+    // Check collisions with any entity that has the Damage component
+    for (damage_entity, damage_transform, damage_collision, joel_component) in &damage_query {
+        let damage_pos = damage_transform.translation.xy();
+        let (damage_min, damage_max) = damage_collision.get_rect(damage_pos);
 
-        if rects_overlap(player_min, player_max, card_min, card_max) {
+        if rects_overlap(player_min, player_max, damage_min, damage_max) {
             damage_events.write(DamageEvent {
                 target: player_entity,
-                amount: card.damage,
+                amount: 1, // All damage is 1 as per the marker component design
             });
 
-            // Destroy the card that hit the player
-            commands.entity(card_entity).try_despawn();
+            // Only destroy non-Joel entities on collision
+            // Joel stays alive and continues to exist after dealing damage
+            if joel_component.is_none() {
+                commands.entity(damage_entity).try_despawn();
+            }
         }
     }
 }

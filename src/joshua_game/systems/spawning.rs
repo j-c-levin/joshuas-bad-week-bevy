@@ -7,7 +7,7 @@ use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            Card, CollisionBox, GameEntity, Health, Joel, Kezia, KeziaState, LifetimeTimer,
+            Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, KeziaState, LifetimeTimer,
             MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState, OffScreenCleanup, Player,
             PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer, TrackTarget,
             TurnRate, Velocity,
@@ -137,14 +137,14 @@ fn handle_card_spawn_events(
 fn update_card_lifetime(
     mut commands: Commands,
     time: Res<Time>,
-    mut card_query: Query<(Entity, &mut Card)>,
+    mut lifetime_query: Query<(Entity, &mut LifetimeTimer)>,
 ) {
     let delta = time.delta_secs();
 
-    for (entity, mut card) in &mut card_query {
-        card.lifetime -= delta;
+    for (entity, mut lifetime) in &mut lifetime_query {
+        lifetime.remaining -= delta;
 
-        if card.lifetime <= 0.0 {
+        if lifetime.remaining <= 0.0 {
             commands.entity(entity).try_despawn();
         }
     }
@@ -253,6 +253,7 @@ fn spawn_kezia_ecs(
         Timer::new(config.kezia_tracking_duration, false),
         MoveInDirection, // Continue moving straight after tracking
         CollisionBox::new(Vec2::new(config.kezia_width, config.kezia_height)),
+        Damage,
         OffScreenCleanup,
         GameEntity,
     ));
@@ -317,10 +318,10 @@ fn spawn_joel_ecs(
         ProjectileLauncher::new(
             config.joel_card_fire_rate,
             config.card_speed,
-            config.card_damage,
         ),
         Timer::new(config.joel_tracking_duration, false),
         CollisionBox::new(Vec2::new(config.joel_width, config.joel_height)),
+        Damage,
         OffScreenCleanup,
         GameEntity,
     ));
@@ -342,11 +343,12 @@ fn spawn_card_ecs(commands: &mut Commands, position: Vec2, direction: Vec2, conf
             rotation: Quat::from_rotation_z(rotation),
             ..default()
         },
-        Card::new(config.card_damage, 5.0), // Keep component for rendering system
+        Card,
         Velocity(direction * config.card_speed),
         MoveInDirection,
         LifetimeTimer::new(5.0),
         CollisionBox::new(Vec2::new(config.card_width, config.card_height)),
+        Damage,
         OffScreenCleanup,
         GameEntity,
     ));
