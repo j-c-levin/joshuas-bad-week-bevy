@@ -8,9 +8,9 @@ use crate::{
     joshua_game::{
         components::{
             Card, CollisionBox, GameEntity, Health, Joel, Kezia, KeziaState, LifetimeTimer,
-            MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState, OffScreenCleanup,
-            Player, PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer,
-            TrackTarget, TurnRate, Velocity,
+            MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState, OffScreenCleanup, Player,
+            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer, TrackTarget,
+            TurnRate, Velocity,
         },
         config::GameConfig,
         events::{CardSpawnEvent, EnemySpawnEvent, EnemyType},

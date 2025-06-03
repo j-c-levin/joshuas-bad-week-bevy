@@ -51,5 +51,4 @@ pub struct GameWinEvent;
 
 /// Event fired when an enemy dies/is destroyed
 #[derive(Event)]
-pub struct EnemyDeathEvent {
-}
+pub struct EnemyDeathEvent {}

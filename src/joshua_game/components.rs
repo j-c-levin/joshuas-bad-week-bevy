@@ -81,8 +81,7 @@ pub struct Movement {
     pub turn_rate: f32,
 }
 
-impl Movement {
-}
+impl Movement {}
 
 #[derive(Component, Reflect)]
 pub struct CollisionBox {
