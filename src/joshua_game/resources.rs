@@ -68,19 +68,15 @@ pub enum GameStateEnum {
 /// Tracks enemy spawning difficulty over time
 #[derive(Resource)]
 pub struct DifficultyState {
-    pub kezia_spawn_timer: f32,
-    pub joel_spawn_timer: f32,
-    pub current_kezia_interval: f32,
-    pub current_joel_interval: f32,
+    pub spawn_timer: f32,
+    pub current_spawn_interval: f32,
 }
 
 impl Default for DifficultyState {
     fn default() -> Self {
         Self {
-            kezia_spawn_timer: 0.0,
-            joel_spawn_timer: 0.0,
-            current_kezia_interval: 2.0, // Start with 2 second intervals
-            current_joel_interval: 8.0,  // Joel spawns less frequently
+            spawn_timer: 0.0,
+            current_spawn_interval: 2.0, // Start with 2 second intervals
         }
     }
 }
@@ -95,11 +91,7 @@ impl DifficultyState {
         let difficulty_progress = (time_elapsed / config.difficulty_ramp_duration).min(1.0);
 
         // Interpolate between initial and minimum spawn intervals
-        self.current_kezia_interval = config.initial_spawn_interval
+        self.current_spawn_interval = config.initial_spawn_interval
             - (config.initial_spawn_interval - config.min_spawn_interval) * difficulty_progress;
-
-        // Joel spawning gets more frequent too, but less aggressively
-        self.current_joel_interval = 8.0 - 5.0 * difficulty_progress;
-        self.current_joel_interval = self.current_joel_interval.max(2.0);
     }
 }

@@ -8,7 +8,7 @@ use crate::{
     joshua_game::{
         components::{
             Card, CollisionBox, Damage, GameEntity, Health, Joel, Kezia, MaxSpeed, MoveInDirection,
-            MoveTowardsPoint, NewJoelState, OffScreenCleanup, Player, PlayerTarget,
+            MoveTowardsPoint, OffScreenCleanup, Player, PlayerTarget,
             ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer, TurnRate, Velocity,
         },
         config::GameConfig,
@@ -73,29 +73,25 @@ fn spawn_enemies_system(
 
     let delta = time.delta_secs();
 
-    // Update spawn timers
-    difficulty.kezia_spawn_timer += delta;
-    difficulty.joel_spawn_timer += delta;
+    // Update single spawn timer
+    difficulty.spawn_timer += delta;
 
-    // Spawn Kezia enemies
-    if difficulty.kezia_spawn_timer >= difficulty.current_kezia_interval {
-        difficulty.kezia_spawn_timer = 0.0;
+    // When timer triggers, randomly choose enemy type
+    if difficulty.spawn_timer >= difficulty.current_spawn_interval {
+        difficulty.spawn_timer = 0.0;
 
+        let mut rng = thread_rng();
         let (spawn_pos, spawn_side) = generate_spawn_position(&config);
-        spawn_events.write(EnemySpawnEvent {
-            enemy_type: EnemyType::Kezia,
-            position: spawn_pos,
-            spawn_side,
-        });
-    }
+        
+        // Randomly choose between Kezia and Joel with equal probability
+        let enemy_type = if rng.gen_bool(0.5) {
+            EnemyType::Kezia
+        } else {
+            EnemyType::Joel
+        };
 
-    // Spawn Joel enemies (less frequently)
-    if difficulty.joel_spawn_timer >= difficulty.current_joel_interval {
-        difficulty.joel_spawn_timer = 0.0;
-
-        let (spawn_pos, spawn_side) = generate_spawn_position(&config);
         spawn_events.write(EnemySpawnEvent {
-            enemy_type: EnemyType::Joel,
+            enemy_type,
             position: spawn_pos,
             spawn_side,
         });
@@ -300,7 +296,6 @@ fn spawn_joel_ecs(
             Velocity(initial_velocity),
             MaxSpeed(config.joel_speed),
             TurnRate(config.joel_turn_rate),
-            NewJoelState::Entering, // Start with new entering state
             MoveTowardsPoint::new(target_position, 5.0),
         ))
         .id();

@@ -6,8 +6,8 @@ use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
         components::{
-            Joel, MaxSpeed, MoveInDirection, MoveTowardsPoint, NewJoelState,
-            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, SpawnSide, Timer, TurnRate,
+            Joel, MaxSpeed, MoveInDirection, MoveTowardsPoint,
+            PlayerTarget, ProjectileLauncher, RotateTowardsTarget, Timer, TurnRate,
             Velocity,
         },
         config::GameConfig,
@@ -48,8 +48,9 @@ pub(super) fn plugin(app: &mut App) {
             rotate_towards_target_system,
             move_in_direction_system,
             move_towards_point_system,
-            kezia_state_system,
-            joel_state_system,
+            kezia_system,
+            joel_start_tracking_system,
+            joel_finish_tracking_system,
             timer_tick_system,
         )
             .chain()
@@ -140,19 +141,44 @@ fn rotate_towards_target_system(
     }
 }
 
-/// Move entities towards a specific point
+/// Move entities towards a specific point and remove component when reached
 fn move_towards_point_system(
-    mut query: Query<(&mut MoveTowardsPoint, &Transform, &mut Velocity, &MaxSpeed)>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut MoveTowardsPoint, &Transform, &mut Velocity, &MaxSpeed)>,
 ) {
-    for (move_towards, transform, mut velocity, max_speed) in &mut query {
+    for (entity, move_towards, transform, mut velocity, max_speed) in &mut query {
         let current_pos = transform.translation.xy();
         let distance = current_pos.distance(move_towards.target_position);
 
         if distance <= move_towards.stop_distance {
             velocity.0 = Vec2::ZERO;
+            // Remove the component when destination is reached
+            commands.entity(entity).remove::<MoveTowardsPoint>();
         } else {
             let direction = (move_towards.target_position - current_pos).normalize_or_zero();
             velocity.0 = direction * max_speed.0;
+        }
+    }
+}
+
+/// Handle Joel entities that just finished moving to their target position and start tracking
+fn joel_start_tracking_system(
+    mut commands: Commands,
+    mut removed_move_towards: RemovedComponents<MoveTowardsPoint>,
+    mut joel_query: Query<&mut Timer, With<Joel>>,
+) {
+    for entity in removed_move_towards.read() {
+        // Check if this entity is a Joel and in the appropriate state
+        if let Ok(mut timer) = joel_query.get_mut(entity) {
+            info!("Joel finished moving to target, transitioning to Tracking");
+            
+            // Reset timer for tracking duration
+            timer.reset();
+            
+            // Add RotateTowardsTarget component when Joel finishes approaching
+            commands
+                .entity(entity)
+                .insert(RotateTowardsTarget::new(std::f32::consts::PI / 2.0));
         }
     }
 }
@@ -202,7 +228,7 @@ fn timer_tick_system(time: Res<Time>, mut timer_query: Query<&mut Timer>) {
 // ==================== State-Specific Systems ====================
 
 /// Handle Kezia state transitions
-fn kezia_state_system(mut commands: Commands, mut query: Query<(Entity, &mut Timer)>) {
+fn kezia_system(mut commands: Commands, mut query: Query<(Entity, &mut Timer)>) {
     for (entity, timer) in &mut query {
         if timer.is_finished() {
             commands.entity(entity).remove::<RotateTowardsTarget>();
@@ -210,108 +236,51 @@ fn kezia_state_system(mut commands: Commands, mut query: Query<(Entity, &mut Tim
     }
 }
 
-/// Handle Joel state transitions
-fn joel_state_system(
+/// Handle Joel entities that just finished tracking and need to retreat
+fn joel_finish_tracking_system(
     mut commands: Commands,
     mut query: Query<(
         Entity,
-        &mut NewJoelState,
-        &mut MoveTowardsPoint,
-        &mut ProjectileLauncher,
         &mut Timer,
         &Transform,
-        &Joel, // Added Joel component to access spawn position
+        &Joel,
         &mut Velocity,
         &MaxSpeed,
     )>,
-    config: Res<GameConfig>,
+    _config: Res<GameConfig>,
 ) {
-    let screen_half_width = config.screen_width / 2.0;
-    let screen_half_height = config.screen_height / 2.0;
-
     for (
         entity,
-        mut state,
-        mut move_towards,
-        _launcher,
-        mut timer,
+        timer,
         transform,
         joel,
         mut velocity,
-        max_speed,
+        _max_speed,
     ) in &mut query
     {
         let current_pos = transform.translation.xy();
 
-        match *state {
-            NewJoelState::Entering => {
-                // Check if Joel has entered the screen area
-                let has_entered_screen = match joel.spawn_side {
-                    SpawnSide::Top => current_pos.y <= screen_half_height,
-                    SpawnSide::Right => current_pos.x <= screen_half_width,
-                    SpawnSide::Bottom => current_pos.y >= -screen_half_height,
-                    SpawnSide::Left => current_pos.x >= -screen_half_width,
-                };
+        // Stay in place and track player (since we have RotateTowardsTarget component)
+        velocity.0 = Vec2::ZERO;
 
-                if has_entered_screen {
-                    info!("Joel entered screen, transitioning from Entering to Approaching");
-                    *state = NewJoelState::Approaching;
-                    // MoveTowardsPoint component will handle movement to target position
-                }
-                // During Entering state, continue moving perpendicular to spawn side
-                // Velocity was set during spawn and should continue
-            }
-            NewJoelState::Approaching => {
-                let distance = current_pos.distance(move_towards.target_position);
-                if distance <= move_towards.stop_distance {
-                    info!("Joel transitioning from Approaching to Tracking");
-                    *state = NewJoelState::Tracking;
-                    timer.reset();
-                    velocity.0 = Vec2::ZERO; // Stop moving
+        if timer.is_finished() {
+            info!("Joel transitioning from Tracking to Retreating");
 
-                    // Remove MoveTowardsPoint component - no longer needed in tracking state
-                    commands.entity(entity).remove::<MoveTowardsPoint>();
+            // Remove RotateTowardsTarget component when leaving tracking state
+            commands.entity(entity).remove::<RotateTowardsTarget>();
 
-                    // Add RotateTowardsTarget component when entering tracking state
-                    commands
-                        .entity(entity)
-                        .insert(RotateTowardsTarget::new(std::f32::consts::PI / 2.0));
-                }
-                // MoveTowardsPoint component handles movement to target position
-            }
-            NewJoelState::Tracking => {
-                // Stay in place and track player
-                velocity.0 = Vec2::ZERO;
+            // Set retreat target position - move back toward spawn position and beyond
+            let spawn_pos = joel.spawn_position;
+            let retreat_direction = (spawn_pos - current_pos).normalize_or_zero();
 
-                if timer.is_finished() {
-                    info!("Joel transitioning from Tracking to Retreating");
-                    *state = NewJoelState::Retreating;
+            // Add MoveTowardsPoint for retreating
+            let retreat_target = spawn_pos + retreat_direction * 500.0;
+            commands.entity(entity).insert(MoveTowardsPoint {
+                target_position: retreat_target,
+                stop_distance: 0.0, // Don't stop until off screen
+            });
 
-                    // Remove RotateTowardsTarget component when leaving tracking state
-                    commands.entity(entity).remove::<RotateTowardsTarget>();
-
-                    // Set retreat target position - move back toward spawn position and beyond
-                    let spawn_pos = joel.spawn_position;
-                    let retreat_direction = (spawn_pos - current_pos).normalize_or_zero();
-
-                    // Set target position far off screen in retreat direction
-                    move_towards.target_position = spawn_pos + retreat_direction * 500.0;
-                    move_towards.stop_distance = 0.0; // Don't stop until off screen
-
-                    // Set retreat velocity
-                    velocity.0 = retreat_direction * max_speed.0;
-
-                    info!(
-                        "Joel set to retreat to position: {:?}",
-                        move_towards.target_position
-                    );
-                }
-            }
-            NewJoelState::Retreating => {
-                // Continue retreating - velocity should maintain retreat direction
-                let retreat_direction = (joel.spawn_position - current_pos).normalize_or_zero();
-                velocity.0 = retreat_direction * max_speed.0;
-            }
+            info!("Joel set to retreat to position: {:?}", retreat_target);
         }
     }
 }
