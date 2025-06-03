@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     AppSystems, PausableSystems,
     joshua_game::{
-        components::{CollisionBox, Damage, Health, Joel, Player},
+        components::{CollisionBox, Damage, Health, Player},
         events::{DamageEvent, GameOverEvent},
         resources::GameState,
     },
@@ -27,7 +27,7 @@ pub(super) fn plugin(app: &mut App) {
 /// Check collisions between player and any entity that can deal damage
 fn player_damage_collision(
     player_query: Query<(Entity, &Transform, &CollisionBox), With<Player>>,
-    damage_query: Query<(Entity, &Transform, &CollisionBox, Option<&Joel>), (With<Damage>, Without<Player>)>,
+    damage_query: Query<(Entity, &Transform, &CollisionBox), With<Damage>>,
     mut damage_events: EventWriter<DamageEvent>,
     mut commands: Commands,
     game_state: Res<GameState>,
@@ -44,21 +44,17 @@ fn player_damage_collision(
     let (player_min, player_max) = player_collision.get_rect(player_pos);
 
     // Check collisions with any entity that has the Damage component
-    for (damage_entity, damage_transform, damage_collision, joel_component) in &damage_query {
+    for (damage_entity, damage_transform, damage_collision) in &damage_query {
         let damage_pos = damage_transform.translation.xy();
         let (damage_min, damage_max) = damage_collision.get_rect(damage_pos);
 
         if rects_overlap(player_min, player_max, damage_min, damage_max) {
             damage_events.write(DamageEvent {
                 target: player_entity,
-                amount: 1, // All damage is 1 as per the marker component design
+                amount: 1,
             });
 
-            // Only destroy non-Joel entities on collision
-            // Joel stays alive and continues to exist after dealing damage
-            if joel_component.is_none() {
-                commands.entity(damage_entity).try_despawn();
-            }
+            commands.entity(damage_entity).try_despawn();
         }
     }
 }
